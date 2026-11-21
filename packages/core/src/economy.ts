@@ -36,7 +36,7 @@ export interface ForecastDay {
 export interface Forecast {
   days: ForecastDay[];
   verdict: "stable" | "inflating" | "deflating";
-  /** Avg daily change in median wealth over the second half, as a fraction. */
+  /** Avg daily change in median wealth over the second half, as a fraction. Above 1%/day (~1.8x in 60 days) counts as inflation. */
   drift: number;
   advice: string[];
   /** Days until the median player could afford the most expensive sink. */
@@ -155,7 +155,7 @@ export function forecastEconomy(econ: Economy, opts: Partial<ForecastOptions> = 
     if (econ.autopilot && day % 7 === 0 && out.length >= 7) {
       const weekAgo = out[out.length - 7]!.median || 1;
       const growth = (out[out.length - 1]!.median - weekAgo) / weekAgo / 7;
-      if (growth > 0.02) propertyTax = Math.min(0.1, propertyTax + 0.005);
+      if (growth > 0.01) propertyTax = Math.min(0.1, propertyTax + 0.005);
       if (growth < -0.005) propertyTax = Math.max(0, propertyTax - 0.005);
     }
   }
@@ -175,7 +175,7 @@ function summarize(days: ForecastDay[], econ: Economy): Forecast {
   const start = econ.startingCash + econ.startingBank;
   const collapsed = start > 0 && last < start * 0.25;
   const verdict: Forecast["verdict"] =
-    drift < -0.01 || collapsed ? "deflating" : drift > 0.02 || supplyDrift > 0.015 ? "inflating" : "stable";
+    drift < -0.01 || collapsed ? "deflating" : drift > 0.01 || supplyDrift > 0.015 ? "inflating" : "stable";
   const sym = econ.currency.symbol;
 
   const advice: string[] = [];
@@ -184,7 +184,7 @@ function summarize(days: ForecastDay[], econ: Economy): Forecast {
   const net = tail.reduce((s, d) => s + d.minted - d.burned, 0) / tail.length;
   const perPlayer = Math.round(net / avgActive);
 
-  if (verdict === "inflating" && drift <= 0.02) {
+  if (verdict === "inflating" && drift <= 0.01) {
     advice.push(`The typical player is fine, but the total money supply grows ${(supplyDrift * 100).toFixed(1)}% a day as top earners pile up cash. Add expensive things worth buying, or raise the property tax.`);
   } else if (verdict === "inflating") {
     advice.push(`Players gain about ${sym}${fmt(perPlayer)} more than they spend each day. Add a recurring cost around that size, like rent or vehicle upkeep.`);

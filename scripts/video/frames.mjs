@@ -75,6 +75,15 @@ const S = {
     <div style="position:absolute;left:50%;top:282px;transform:translate(-50%,-50%)">${animatedLogoSvg({ id: "L", scale: 1.75 })}</div>
     <div style="position:absolute;left:0;right:0;top:410px;text-align:center;font:600 28px 'DM Sans';letter-spacing:.32em;color:#E8DEF0;${A("in", 0.9, 1.9)}">RIPTIDE&nbsp;TOOLS</div>`,
   },
+  // Pure 2D intro/outro: the logo builds itself on the brand night background.
+  intro2d: {
+    dur: 4.5, alpha: false,
+    html: `<div style="position:absolute;inset:0;background:#130F26"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(42% 46% at 50% 62%,rgba(255,79,154,.20),transparent 70%);${A("fade", 1.6, 0.2)}"></div>
+    <div style="position:absolute;left:50%;top:500px;transform:translate(-50%,-50%)">${animatedLogoSvg({ id: "I", scale: 2 })}</div>
+    <div style="position:absolute;left:50%;top:668px;width:560px;margin-left:-280px;height:2px;background:linear-gradient(90deg,transparent,#FFB36B 25%,#FF6F7D 50%,#FF4F9A 75%,transparent);transform-origin:center;${A("grow", 1.3, 1.25)}"></div>
+    <div style="position:absolute;left:0;right:0;top:698px;text-align:center;font:600 28px 'DM Sans';letter-spacing:.34em;color:#D9CFE6;${A("in", 0.9, 1.75)}">RIPTIDE&nbsp;TOOLS</div>`,
+  },
   cap1: caption("GTA VI is coming to PC.", "And everyone will want their own server.", 4, ["sun", "Heads up"]),
   cap2: caption("Most will spend weeks<br>fighting config files.", "", 3.5),
   meet: {
@@ -92,7 +101,7 @@ const S = {
   cap5: caption("One click. Live in minutes.", "Preview servers, rollbacks and backups built in.", 3.5, ["sea", "Coming with RipTide hosting"]),
   cap6: caption("Ready for GTA VI on day one.", "When GTA VI Online drops, we aim to be first to support it.", 4, ["pink", "GTA VI"]),
   cta: {
-    dur: 4.5, alpha: false,
+    dur: 7.5, alpha: false,
     html: `<div style="position:absolute;inset:0;${night}"></div>
     <div style="position:absolute;left:50%;top:400px;transform:translate(-50%,-50%)">${animatedLogoSvg({ id: "C", scale: 1.5, delay: -0.2 })}</div>
     <div style="position:absolute;left:0;right:0;top:560px;text-align:center;${A("in", 0.8, 1.5)}"><span class="chip pink" style="font-size:28px;height:56px">Testers wanted for GTA V presets</span></div>
