@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="rt-sun" x1="32" y1="4" x2="32" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFB36B"/>
+      <stop offset="0.55" stop-color="#FF6F7D"/>
+      <stop offset="1" stop-color="#FF3D9A"/>
+    </linearGradient>
+    <clipPath id="rt-sky">
+      <path d="M0 0H64V28.5C57 28.5 53.5 29 49.5 30.5C42 33.5 39 42.5 27 42.5C18 42.5 13 39.5 0 39.5Z"/>
+    </clipPath>
+  </defs>
+  <circle cx="31" cy="27" r="23" fill="url(#rt-sun)" clip-path="url(#rt-sky)"/>
+  <path d="M5 46C13 46 18 49.5 27 49.5C40 49.5 42.5 36.5 51.5 36.5C57.8 36.5 60.6 42.6 57 46.4C53.9 49.6 48.6 47.6 49.3 43.6" stroke="#3DF2D0" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

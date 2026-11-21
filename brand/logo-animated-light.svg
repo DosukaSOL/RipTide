@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 490 140" width="490" height="140" role="img" aria-label="Riptide">
+<style>
+.rt-sun{animation:rt-rise 1.15s cubic-bezier(.2,.8,.2,1) 0.40s both}
+.rt-wave{stroke-dasharray:1;stroke-dashoffset:0;animation:rt-draw 1.05s cubic-bezier(.65,0,.35,1) 0.75s both}
+.rt-glow{animation:rt-glow 1.6s ease-out 0.50s both}
+.rt-l{animation:rt-up .7s cubic-bezier(.34,1.45,.64,1) both}
+@keyframes rt-rise{from{transform:translateY(30px)}}
+@keyframes rt-draw{0%{stroke-dashoffset:1;opacity:0}6%{opacity:1}100%{stroke-dashoffset:0}}
+@keyframes rt-glow{0%{opacity:0}45%{opacity:.9}100%{opacity:0}}
+@keyframes rt-up{from{opacity:0;transform:translateY(16px)}}
+@media (prefers-reduced-motion:reduce){.rt-sun,.rt-wave,.rt-glow,.rt-l{animation:none}}
+</style>
+<defs>
+<linearGradient id="rt-g" x1="32" y1="4" x2="32" y2="46" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFB36B"/><stop offset=".55" stop-color="#FF6F7D"/><stop offset="1" stop-color="#FF3D9A"/></linearGradient>
+<radialGradient id="rt-r" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FF6F7D" stop-opacity=".55"/><stop offset="1" stop-color="#FF6F7D" stop-opacity="0"/></radialGradient>
+<clipPath id="rt-c"><path d="M0 0H64V28.5C57 28.5 53.5 29 49.5 30.5C42 33.5 39 42.5 27 42.5C18 42.5 13 39.5 0 39.5Z"/></clipPath>
+</defs>
+<g transform="translate(4 6) scale(2)">
+<circle class="rt-glow" cx="31" cy="30" r="30" fill="url(#rt-r)" opacity="0"/>
+<g clip-path="url(#rt-c)"><circle class="rt-sun" cx="31" cy="27" r="23" fill="url(#rt-g)"/></g>
+<path class="rt-wave" pathLength="1" d="M5 46C13 46 18 49.5 27 49.5C40 49.5 42.5 36.5 51.5 36.5C57.8 36.5 60.6 42.6 57 46.4C53.9 49.6 48.6 47.6 49.3 43.6" fill="none" stroke="#3DF2D0" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<g class="rt-l" style="animation-delay:1.30s"><path fill="#130F26" transform="translate(152.00 100) scale(0.112 -0.112)" d="M54 0H187V308C187 394 226 437 306 439V567H296C239 567 211 551 176 500V554H54Z"/></g><g class="rt-l" style="animation-delay:1.35s"><path fill="#130F26" transform="translate(185.60 100) scale(0.112 -0.112)" d="M54 0H187V554H54ZM55 634H188V767H55Z"/></g><g class="rt-l" style="animation-delay:1.41s"><path fill="#130F26" transform="translate(210.24 100) scale(0.112 -0.112)" d="M54 -185H187V52C237 7 289 -13 357 -13C517 -13 634 111 634 279C634 446 518 567 358 567C283 567 219 539 176 489V554H54ZM179 278C179 373 249 445 341 445C431 445 500 372 500 276C500 182 431 109 343 109C249 109 179 181 179 278Z"/></g><g class="rt-l" style="animation-delay:1.47s"><path fill="#130F26" transform="translate(281.92 100) scale(0.112 -0.112)" d="M9 433H74V0H207V433H287V554H207V739H74V554H9Z"/></g><g class="rt-l" style="animation-delay:1.52s"><path fill="#130F26" transform="translate(313.28 100) scale(0.112 -0.112)" d="M54 0H187V554H54ZM55 634H188V767H55Z"/></g><g class="rt-l" style="animation-delay:1.57s"><path fill="#130F26" transform="translate(337.92 100) scale(0.112 -0.112)" d="M30 278C30 114 151 -13 308 -13C383 -13 438 12 491 72V0H613V739H480V505C441 548 377 574 307 574C152 574 30 444 30 278ZM164 284C164 378 235 452 326 452C419 452 490 377 490 280C490 184 419 109 329 109C236 109 164 186 164 284Z"/></g><g class="rt-l" style="animation-delay:1.63s"><path fill="#130F26" transform="translate(409.60 100) scale(0.112 -0.112)" d="M30 275C30 113 161 -13 330 -13C442 -13 557 50 594 164H449C415 124 382 109 327 109C248 109 190 151 174 218H603C607 237 608 249 608 269C608 441 487 567 322 567C159 567 30 438 30 275ZM170 335C191 406 245 445 324 445C406 445 460 406 477 335Z"/></g>
+</svg>

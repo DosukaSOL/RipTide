@@ -1,0 +1,15 @@
+node_modules
+dist/
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+coverage/
+.vscode/
+.idea/
+# Local Blueprints you're experimenting with (the example stays tracked)
+*.local.riptide.json

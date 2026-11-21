@@ -1,0 +1,40 @@
+{
+  "name": "riptide",
+  "version": "0.1.0-preview",
+  "description": "The no-code server studio. Design rules, roles, economy, mods and visuals, then deploy in one click.",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "author": "Dosuka (https://github.com/DosukaSOL)",
+  "homepage": "https://github.com/DosukaSOL/RipTide",
+  "engines": { "node": ">=20" },
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "dev": "node scripts/build-studio.mjs --serve",
+    "build": "node scripts/build-cli.mjs && node scripts/build-studio.mjs",
+    "test": "node --import tsx --test packages/core/test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "riptide": "node packages/cli/dist/riptide.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
+    "brand": "node scripts/brand.mjs"
+  },
+  "dependencies": {
+    "d3-scale": "^4.0.2",
+    "d3-shape": "^3.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-icons": "^5.7.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/d3-scale": "^4.0.9",
+    "@types/d3-shape": "^3.2.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.28.0",
+    "playwright": "^1.63.0",
+    "tsx": "^4.20.0",
+    "typescript": "^6.0.0"
+  }
+}

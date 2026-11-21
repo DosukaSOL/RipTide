@@ -1,0 +1,339 @@
+{
+  "version": 1,
+  "meta": {
+    "name": "Neon Coast",
+    "slug": "neon-coast",
+    "tagline": "Serious roleplay, sunset to sunrise",
+    "tags": [
+      "roleplay",
+      "serious",
+      "economy",
+      "whitelist"
+    ],
+    "language": "en",
+    "maxPlayers": 128,
+    "region": "us-mia",
+    "discordGuild": "neon-coast"
+  },
+  "engine": {
+    "target": "fivem",
+    "build": "3258"
+  },
+  "world": {
+    "weather": {
+      "mode": "synced",
+      "preset": "clear"
+    },
+    "time": {
+      "mode": "accelerated",
+      "scale": 4
+    },
+    "trafficDensity": 0.6,
+    "pedDensity": 0.7,
+    "police": "players",
+    "pvp": true,
+    "zones": [
+      {
+        "id": "hospital",
+        "label": "Hospital",
+        "flags": {
+          "pvp": false,
+          "weapons": false
+        }
+      },
+      {
+        "id": "beachfront",
+        "label": "Beachfront",
+        "flags": {
+          "speedLimit": 35
+        }
+      }
+    ]
+  },
+  "economy": {
+    "currency": {
+      "name": "Dollar",
+      "symbol": "$"
+    },
+    "startingCash": 500,
+    "startingBank": 2500,
+    "jobs": [
+      {
+        "id": "delivery",
+        "label": "Delivery driver",
+        "payPerHour": 900,
+        "share": 0.22
+      },
+      {
+        "id": "mechanic",
+        "label": "Mechanic",
+        "payPerHour": 1250,
+        "share": 0.12
+      },
+      {
+        "id": "police",
+        "label": "Police officer",
+        "payPerHour": 1500,
+        "slots": 24,
+        "share": 0.14
+      },
+      {
+        "id": "ems",
+        "label": "Paramedic",
+        "payPerHour": 1450,
+        "slots": 16,
+        "share": 0.08
+      },
+      {
+        "id": "fisher",
+        "label": "Fisher",
+        "payPerHour": 700,
+        "share": 0.1
+      },
+      {
+        "id": "club",
+        "label": "Club staff",
+        "payPerHour": 1000,
+        "share": 0.08
+      }
+    ],
+    "sinks": [
+      {
+        "id": "food",
+        "label": "Food and drinks",
+        "avgCost": 40,
+        "perDay": 6
+      },
+      {
+        "id": "fuel",
+        "label": "Fuel",
+        "avgCost": 85,
+        "perDay": 3
+      },
+      {
+        "id": "rent",
+        "label": "Apartment rent",
+        "avgCost": 550,
+        "perDay": 1
+      },
+      {
+        "id": "repairs",
+        "label": "Vehicle repairs",
+        "avgCost": 650,
+        "perDay": 0.35
+      },
+      {
+        "id": "clothes",
+        "label": "Clothing",
+        "avgCost": 300,
+        "perDay": 0.4
+      },
+      {
+        "id": "cars",
+        "label": "New vehicles",
+        "avgCost": 38000,
+        "perDay": 0.012
+      }
+    ],
+    "taxes": {
+      "income": 0.12,
+      "sales": 0.07,
+      "property": 0.02,
+      "propertyThreshold": 60000
+    },
+    "autopilot": true,
+    "welfarePerHour": 600
+  },
+  "roles": [
+    {
+      "id": "citizen",
+      "name": "Citizen",
+      "color": "#9C93C2",
+      "permissions": [
+        "chat.ooc",
+        "vehicle.own"
+      ]
+    },
+    {
+      "id": "police",
+      "name": "Police",
+      "color": "#5AA9FF",
+      "inherits": "citizen",
+      "permissions": [
+        "mdt.read",
+        "mdt.write",
+        "cuff",
+        "impound"
+      ],
+      "limit": 24,
+      "discordRole": "LSPD"
+    },
+    {
+      "id": "ems",
+      "name": "Paramedic",
+      "color": "#3DF2D0",
+      "inherits": "citizen",
+      "permissions": [
+        "revive",
+        "mdt.read"
+      ],
+      "limit": 16
+    },
+    {
+      "id": "mod",
+      "name": "Moderator",
+      "color": "#FFB36B",
+      "inherits": "citizen",
+      "permissions": [
+        "kick",
+        "spectate",
+        "tickets",
+        "noclip"
+      ]
+    },
+    {
+      "id": "admin",
+      "name": "Admin",
+      "color": "#FF4F9A",
+      "inherits": "mod",
+      "permissions": [
+        "admin.*"
+      ]
+    }
+  ],
+  "rulebook": "# Respect\nTreat every player like a real person, in and out of character.\nNo hate speech, slurs or harassment.\n\n# Roleplay\nValue your life. If you're outnumbered at gunpoint, act like it.\nNo PvP in the hospital.\nNew players can't buy weapons for 2 hours.\nPolice need at least 4 officers online before bank robberies.\nMax 8 members per gang.\n\n# Driving\nSpeed limit is 35 mph on the beachfront.\nCivilians can't race between 6am and 8pm.\n\n# Server\nRestart every day at 06:00 and 18:00.\n30 minutes cooldown between store robberies.",
+  "mods": [
+    {
+      "id": "oxmysql",
+      "enabled": true
+    },
+    {
+      "id": "qbox",
+      "enabled": true
+    },
+    {
+      "id": "ox-inventory",
+      "enabled": true
+    },
+    {
+      "id": "pma-voice",
+      "enabled": true
+    },
+    {
+      "id": "lb-phone",
+      "enabled": true
+    },
+    {
+      "id": "riptide-hud",
+      "enabled": true
+    },
+    {
+      "id": "jg-garages",
+      "enabled": true
+    },
+    {
+      "id": "jobs-pack",
+      "enabled": true
+    },
+    {
+      "id": "police-mdt",
+      "enabled": true
+    },
+    {
+      "id": "ems-pack",
+      "enabled": true
+    },
+    {
+      "id": "beach-club-mlo",
+      "enabled": true
+    },
+    {
+      "id": "eup-pack",
+      "enabled": true
+    },
+    {
+      "id": "txadmin",
+      "enabled": true
+    },
+    {
+      "id": "riptide-guard",
+      "enabled": true
+    },
+    {
+      "id": "discord-bridge",
+      "enabled": true
+    },
+    {
+      "id": "graphics-neon",
+      "enabled": true
+    },
+    {
+      "id": "a11y-pack",
+      "enabled": true
+    }
+  ],
+  "visuals": {
+    "preset": "graphics-neon",
+    "bloom": 0.35,
+    "grain": 0.1,
+    "saturation": 1.15,
+    "allowOptOut": true
+  },
+  "access": {
+    "whitelist": true,
+    "application": {
+      "questions": [
+        "Tell us about a character you'd like to play.",
+        "What does 'value your life' mean to you?",
+        "How did you find Neon Coast?"
+      ],
+      "reviewers": [
+        "mod",
+        "admin"
+      ]
+    },
+    "discordRequired": true,
+    "minAccountAgeDays": 14,
+    "queuePriority": [
+      {
+        "role": "admin",
+        "priority": 100
+      },
+      {
+        "role": "police",
+        "priority": 20
+      },
+      {
+        "role": "ems",
+        "priority": 20
+      }
+    ]
+  },
+  "schedule": [
+    {
+      "id": "sunset-meet",
+      "label": "Sunset car meet",
+      "cron": "0 20 * * 5",
+      "action": "event",
+      "payload": {
+        "zone": "beachfront"
+      }
+    },
+    {
+      "id": "storm-night",
+      "label": "Storm night",
+      "cron": "0 22 * * 6",
+      "action": "weather",
+      "payload": {
+        "preset": "thunder"
+      }
+    }
+  ],
+  "ops": {
+    "backups": {
+      "everyHours": 6,
+      "keep": 28
+    },
+    "previews": true
+  }
+}

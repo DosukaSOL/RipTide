@@ -1,0 +1,9 @@
+{
+  "name": "@riptide/cli",
+  "version": "0.1.0-preview",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "bin": { "riptide": "dist/riptide.mjs" },
+  "dependencies": { "@riptide/core": "*" }
+}

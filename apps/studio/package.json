@@ -1,0 +1,8 @@
+{
+  "name": "@riptide/studio",
+  "version": "0.1.0-preview",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "dependencies": { "@riptide/core": "*" }
+}
