@@ -71,10 +71,9 @@ const S = {
   // Intro/outro: exact animated logo + tagline, transparent.
   logo: {
     dur: 6, alpha: true,
-    html: `<div style="position:absolute;inset:0;background:radial-gradient(36% 26% at 50% 36%,rgba(13,9,28,.55),transparent 75%);${A("fade", 1, 0)}"></div>
-    <div style="position:absolute;left:50%;top:330px;transform:translate(-50%,-50%)">${animatedLogoSvg({ id: "L", scale: 1.75 })}</div>
-    <div style="position:absolute;left:50%;top:482px;width:520px;margin-left:-260px;height:2px;background:linear-gradient(90deg,transparent,#FFB36B 25%,#FF6F7D 50%,#FF4F9A 75%,transparent);transform-origin:center;${A("grow", 1.4, 1.2)}"></div>
-    <div style="position:absolute;left:0;right:0;top:508px;text-align:center;font:600 28px 'DM Sans';letter-spacing:.32em;color:#E8DEF0;${A("in", 0.9, 1.9)}">RIPTIDE&nbsp;TOOLS</div>`,
+    html: `<div style="position:absolute;inset:0;background:radial-gradient(36% 24% at 50% 30%,rgba(13,9,28,.55),transparent 75%);${A("fade", 1, 0)}"></div>
+    <div style="position:absolute;left:50%;top:282px;transform:translate(-50%,-50%)">${animatedLogoSvg({ id: "L", scale: 1.75 })}</div>
+    <div style="position:absolute;left:0;right:0;top:410px;text-align:center;font:600 28px 'DM Sans';letter-spacing:.32em;color:#E8DEF0;${A("in", 0.9, 1.9)}">RIPTIDE&nbsp;TOOLS</div>`,
   },
   cap1: caption("GTA VI is coming to PC.", "And everyone will want their own server.", 4, ["sun", "Heads up"]),
   cap2: caption("Most will spend weeks<br>fighting config files.", "", 3.5),
