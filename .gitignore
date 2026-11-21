@@ -13,3 +13,4 @@ coverage/
 .idea/
 # Local Blueprints you're experimenting with (the example stays tracked)
 *.local.riptide.json
+.video/
