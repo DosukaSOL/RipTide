@@ -168,6 +168,20 @@ code { font: 15px var(--code); padding: 1px 6px; border-radius: 6px; background:
 .screens.go .flyer { opacity: 1; transform: translateX(calc(100% + 56px)); box-shadow: 0 0 0 2px rgba(61, 242, 208, .7), 0 0 40px rgba(61, 242, 208, .35); }
 .screens.go .scr-swap { opacity: 0; }
 
+/* downloads */
+.dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.dl-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 28px; border-radius: 20px; text-decoration: none; background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); transition: transform .24s var(--ease), border-color .24s, box-shadow .24s; }
+.dl-card svg { width: 38px; height: 38px; margin-bottom: 10px; fill: var(--sand); transition: transform .3s var(--ease), fill .3s; }
+.dl-card:hover { transform: translateY(-4px); border-color: rgba(61, 242, 208, .5); box-shadow: 0 18px 40px rgba(4, 2, 14, .5), 0 0 30px rgba(61, 242, 208, .12); }
+.dl-card:hover svg { transform: scale(1.08); fill: var(--sea); }
+.dl-os { font: 700 26px/1.1 var(--display); letter-spacing: -.01em; }
+.dl-meta { font-size: 15px; color: var(--muted); }
+.dl-alt { color: var(--sea); text-decoration: underline; cursor: pointer; }
+.dl-btn { margin-top: 18px; pointer-events: none; }
+.dl-card:hover .dl-btn { box-shadow: 0 14px 34px rgba(255, 79, 154, .45); }
+.dl-note { max-width: 58em; margin-top: 22px; }
+.dl-note a, .fine a { color: var(--sea); }
+
 /* why cards */
 .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .card { position: relative; padding: 26px 26px 24px 30px; border-radius: 18px; background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); transition: transform .24s var(--ease), border-color .24s, box-shadow .24s; }
@@ -229,6 +243,7 @@ code { font: 15px var(--code); padding: 1px 6px; border-radius: 6px; background:
   .tool-tab::before { left: 16px; right: 16px; top: auto; bottom: 0; width: auto; height: 3px; transform: scaleX(0); }
   .tool-tab[aria-selected="true"]::before { transform: scaleX(1); }
   .cards, .status { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dl { grid-template-columns: minmax(0, 1fr); }
   .tilt { transform: none; }
 }
 @media (max-width: 680px) {

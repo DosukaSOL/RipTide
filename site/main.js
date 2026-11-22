@@ -113,6 +113,15 @@
     else { video.pause(); fig.classList.remove("playing"); }
   });
 
+  /* ---------- the .deb link inside the Linux card ---------- */
+  document.querySelectorAll(".dl-alt").forEach((el) => {
+    el.setAttribute("role", "link");
+    el.tabIndex = 0;
+    const open = (e) => { e.preventDefault(); e.stopPropagation(); location.href = el.dataset.href; };
+    el.addEventListener("click", open);
+    el.addEventListener("keydown", (e) => e.key === "Enter" && open(e));
+  });
+
   /* ---------- reveal, counters, two-screen demo ---------- */
   const count = (el) => {
     const end = Number(el.dataset.count);
@@ -125,7 +134,7 @@
     };
     requestAnimationFrame(step);
   };
-  document.querySelectorAll(".frame:not(.float), .card, .st").forEach((el) => el.classList.add("reveal"));
+  document.querySelectorAll(".frame:not(.float), .card, .st, .dl-card").forEach((el) => el.classList.add("reveal"));
   if ("IntersectionObserver" in window) {
     const io = new IntersectionObserver((entries) => {
       for (const e of entries) {
