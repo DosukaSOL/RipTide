@@ -1,0 +1,9 @@
+{
+  "name": "@riptide/tools",
+  "version": "0.1.0-preview",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": { "zod": "^3.25.0" }
+}

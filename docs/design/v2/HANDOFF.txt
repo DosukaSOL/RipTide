@@ -1,0 +1,218 @@
+RIPTIDE TOOLS — DESIGN V2 / REPLACEMENT VISUAL DIRECTION
+=======================================================
+DATE: 2026-11-22
+REPOSITORY: https://github.com/DosukaSOL/RipTide
+SCOPE: This handoff REPLACES the previous neon-cyber design images and UI instructions.
+      Continue to use the original FUNCTIONAL roadmap (Riptide Studio, ViceLab,
+      Heist Ops, Interactive Map, multi-window workspaces) where compatible.
+      Do not use the previous design boards as references.
+
+READ THIS FIRST
+---------------
+The earlier UI concepts were rejected for being cluttered, overly neon, invented-looking
+and for displaying the WRONG logo. Treat those images as obsolete.
+
+The five NEW PNGs in this package are the reference screens. They are deliberately
+uncluttered. Build toward this visual hierarchy and density, not a crowded cyberpunk HUD.
+Each image is 1920 × 1080 (16:9); the delivered desktop app must remain resizable.
+
+The exact real logo has been taken from the RipTide repo's brand assets.
+Use the EXISTING files directly in the application, not copied / recreated artwork:
+  brand/mark.svg
+  brand/lockup.png
+  brand/logo-animated-dark.svg
+  brand/logo-animated-light.svg
+  brand/BRAND.md
+
+THE REAL BRAND — NON-NEGOTIABLE
+------------------------------
+Read brand/BRAND.md before touching styles. Do not invent a cyan wave icon or replace
+RipTide's logo with a generic surf logo. The mark is a SUNSET CUT BY A CURLING WAVE.
+It is an original vector asset with an unmistakable small curl at its right end.
+Do NOT recolor, stretch, outline, redraw or distort the logo. Respect clear space.
+
+Official brand tokens extracted from repo:
+  Night      #130F26  -- background
+  Deep       #1A1533  -- panels
+  Sand       #F4E9DC  -- main typography
+  Haze       #A69DC9  -- secondary text
+  Flamingo   #FF4F9A  -- primary actions, active navigation
+  Sunset     #FFB36B  -- warmth / rare highlights
+  Seafoam    #3DF2D0  -- success / healthy / connected
+
+Existing repo fonts/design standards (honor their licenses):
+  TeX Gyre Adventor Bold for branded display headings
+  DM Sans for main interface text
+  Anonymous Pro for actual code and file paths
+
+Do not ship a different font/logo palette simply because image generators made it up.
+The mockups use broadly compatible stand-in typography; the application's implemented
+font system must follow the actual brand file.
+
+DESIGN PHILOSOPHY
+-----------------
+Professional in the way a premium large-budget gaming application's companion UI
+might feel: confident type, deliberate spacing, calm color, excellent alignment,
+quality micro-interactions, and strong art direction. NOT an imitation of an
+official Rockstar asset, logo, UI, or trademarked styling. Maintain clear independent
+project attribution.
+
+Motion is a REWARD to the user action, not an ambient light show.
+- The animated logo on initial launch may be the one showpiece (already in repo).
+- Tab changes: 160–240 ms subtle fade + 4–8 px slide.
+- Sidebar active indicator: gentle 160–240 ms slide.
+- Hover: small contrast/surface change, not bright glow around every card.
+- Buttons: 120–160 ms response and a tiny pressed translation.
+- Map filters/markers: graceful 150–250 ms state changes.
+- Success: brief seafoam confirmation, never constant neon pulsing.
+- Respect reduced-motion preferences and OS accessibility settings.
+- Cap animation work and avoid repainting heavy surfaces under performance plots.
+
+USABILITY
+---------
+1. One obvious primary action per major screen. Don't show five competing CTA buttons.
+2. Show only controls needed for the current task; advanced options can be disclosed.
+3. Make tabs, search, filters and empty states genuinely usable, not cosmetic.
+4. Preserve every existing RipTide Studio action, state, validation, deploy pathway
+   and keyboard/mouse affordance. No core behavior changes during a design pass.
+5. Avoid made-up live FPS, payouts, game-version IDs, map locations, 'healthy systems'
+   or completed features without real data to back them up.
+6. Keep unreadable microcopy out. Target readable desktop sizes and contrast.
+7. Support keyboard navigation and clear focus indicators, not hover-only UI.
+8. Avoid needless dialogs; use contextual drawers/inspectors for advanced tasks.
+9. Honor 125%, 150%, and 200% Windows display scaling; keep all content available
+   at reduced window widths via sensible responsive layouts and scrolling.
+10. Avoid resource-intensive constantly running animations when a game is active.
+
+FIVE NEW SCREEN REFERENCES
+--------------------------
+01_Home.png        Main hub: relaxed and concise, only four tool modules plus running
+                   tools and workspaces. A tiny brand sunset is enough visual delight.
+02_ViceLab.png     Empty first-run benchmark screen; real results replace the dashes
+                   only when a genuine measurement is available.
+03_Heist_Ops.png   Plain collaborative planning structure (operation, crew roles,
+                   phases, notes) with NO invented GTA VI Online mission data.
+04_Map.png         Map workspace with useful search/filter/details layout. The map
+                   canvas is SCHEMATIC, NOT a GTA VI geographical map. Real verified
+                   mapping data can be loaded later through a content pipeline.
+05_Workspaces.png  Two-monitor workspace architecture: ViceLab in main desktop window,
+                   map in a detached independent second window. Preview only.
+
+APP SHELL & MODULES
+-------------------
+Keep 'RipTide Tools' as the shell / hub and 'RipTide Studio' as its existing server
+studio module. Do not rename or discard existing projects/Blueprints/CLI functionality.
+
+Navigation in reference:
+ Home
+ RipTide Studio
+ ViceLab
+ Heist Ops
+ Interactive Map
+ Workspaces
+ Roadmap
+ Settings
+ Help & feedback
+
+Preserve future extensibility through a module registry, shared styling tokens,
+shared UI primitives, and module-level persistence rather than giant top-level pages.
+
+REAL REPO ARCHITECTURE
+----------------------
+Inspect first:
+ apps/studio/src/App.tsx
+ apps/studio/src/styles.css
+ packages/core
+ packages/cli
+ brand/BRAND.md
+ docs/ARCHITECTURE.md
+ docs/ROADMAP.md
+
+Original project is a TypeScript no-code server studio (with Blueprint, economy,
+rulebook, integrations, validation and CLI) running in a browser. Its README says
+hosted deployment is still simulated until its hosting service opens; never label
+simulated deployment as production hosting. Preserve working FiveM build support.
+
+If adding a desktop shell for genuine docked/detached cross-monitor native windows,
+choose a safe approach after checking existing code. Electron or Tauri are options,
+but do not arbitrarily rewrite the core React/Vite app or break the browser studio.
+Separate desktop window management from tool implementations and keep a safe IPC
+boundary. Prevent untrusted remote content from having system privileges. Implement
+window restoration robustly across monitor disconnect/reconnect and DPI changes.
+
+BUILD NOW / FUTURE GATING
+-------------------------
+A. RipTide Studio:
+   Keep all existing server studio functionality and branding. Plug it into the
+   RipTide Tools shell. Build a compatibility bridge, not a rewrite of core logic.
+
+B. ViceLab:
+   Build a performance telemetry and results infrastructure for supported PC games
+   already available. Provide empty states, basic benchmark templates, import/export,
+   screenshot comparisons, and hardware profiles. Add real GTA VI PC-specific tests,
+   game detection and recommendations ONLY when the PC game can be tested.
+   Never fabricate data or claim automatic game optimization without reliable tests.
+
+C. Heist Ops:
+   Build mission-agnostic local templates, operation phases, role slots, checklists,
+   notes, sharing contracts, persistence, and a safe room-synchronization design.
+   Online sync is only 'live' once it has actually been implemented and tested.
+   Avoid claiming any GTA VI Online missions, rewards, coordinates or mechanics now.
+
+D. Interactive Map:
+   Build pannable/zoomable map viewer, layers, robust category filters, search,
+   saved filters, user notes, bookmarks, pop-out support and a versioned content
+   import pipeline. With no verified GTA VI full-map data, show a legitimate blank,
+   schematic or community-added layer. Clearly distinguish official, verified,
+   community, and personal map records; moderation and provenance required.
+
+E. Workspaces:
+   Open independent tool windows simultaneously; support detach/re-dock, move to
+   second display, restore saved geometry, recover if monitor unplugged, and persist
+   tool state. Avoid a single global active-tool state that unmounts other modules.
+
+F. Roadmap:
+   List as future modules until researched/tested: patch tracker, vehicle/property
+   planner, loadout builder, mission/activity tracker, creator toolkit, clip
+   organizer, discovery journal, crew finder, economy planner, route library,
+   community benchmark browser and multiplayer debrief timelines.
+   Add release gates that depend on GTA VI PC/Online availability and policy review.
+
+PROTECTION AGAINST LOST FUNCTIONALITY
+-------------------------------------
+- Before any redesign: record current studio behavior with screenshots and tests.
+- Feature flags for new shell and tool screens.
+- Keep existing core/CLI tests passing throughout.
+- No changes to Blueprint schemas without backward-compatible migration.
+- Do not destroy saved user projects or developer presets.
+- Preserve user input validation, export functions, and deploy flow.
+- Run layout tests at 1920x1080, 1600x900, 1366x768 and 125–200% scaling.
+- Test clean install, upgrade, keyboard navigation, monitor hotplug, modal routing,
+  active session persistence, app restart, detached-window close/reopen.
+- Avoid remote process injection, protected memory reads or gameplay automation
+  for GTA Online. Re-check Rockstar/anti-cheat rules at integration time.
+- UI mockups have buttons and sample views for design reference: do not treat their
+  states as implemented functionality, and never ship fake status badges as live.
+
+ACCEPTANCE CRITERIA
+-------------------
+[ ] Visually matches the NEW restrained screen references, not old neon mockups.
+[ ] Exact repo logo, color palette and font policy preserved.
+[ ] Existing RipTide Studio and CLI remain functional.
+[ ] Every new tool is available through a consistent navigation structure.
+[ ] Two or more tools can remain mounted and run simultaneously.
+[ ] Map can detach, move to second monitor, reopen, and preserve its filters.
+[ ] Empty/unknown states are honest and readable.
+[ ] All windows are usable by keyboard and at high DPI.
+[ ] Smooth transitions respect reduced-motion and don't harm gameplay performance.
+[ ] All unreleased GTA VI dependencies remain explicit and feature-gated.
+[ ] User projects/settings migrate safely and tests pass.
+
+DELIVERY
+--------
+Ship the new design incrementally behind a feature flag. Do not rip out the current
+UI before the new shell is complete, tested and accepted. Replace old visual examples
+in the previous agent handoff with THESE new image files. Report which items are
+built, which are demonstrations, and which are blocked by GTA VI release dependencies.
+
+END OF HANDOFF.

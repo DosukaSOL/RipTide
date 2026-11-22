@@ -1,13 +1,14 @@
 import { useMemo } from "react";
 import { LuRocket, LuShare2, LuGitBranch, LuGitMerge } from "react-icons/lu";
 import { assessReadiness, estimateBudget, estimateHosting, encodeBlueprint, REGIONS } from "@riptide/core";
-import { useStore } from "../lib/store";
+import { useHref, useStore } from "../lib/store";
 import { Sunrise } from "../components/Sunrise";
 import { Check, Cross, money } from "../components/ui";
 import { DEPLOY_HISTORY, PREVIEWS } from "../lib/sample";
 
 export function Overview() {
   const { bp, toast } = useStore();
+  const href = useHref();
   const readiness = useMemo(() => assessReadiness(bp), [bp]);
   const budget = useMemo(() => estimateBudget(bp), [bp]);
   const hosting = useMemo(() => estimateHosting(bp), [bp]);
@@ -37,7 +38,7 @@ export function Overview() {
           <h1>{bp.meta.name}</h1>
           <p>{bp.meta.tagline}</p>
           <div className="hero-actions">
-            <a className="btn primary" href="#/deploy" style={{ textDecoration: "none" }}><LuRocket />Deploy</a>
+            <a className="btn primary" href={href("deploy")} style={{ textDecoration: "none" }}><LuRocket />Deploy</a>
             <button className="btn" onClick={share}><LuShare2 />Copy share code</button>
           </div>
         </div>
@@ -78,7 +79,7 @@ export function Overview() {
             {readiness.checks.map((c) => (
               <li key={c.id}>
                 <span className={`ic ${c.passed ? "ok" : "no"}`}>{c.passed ? <Check /> : <Cross />}</span>
-                <a href={`#/${sectionRoute(c.section)}`}>
+                <a href={href(sectionRoute(c.section))}>
                   <span className="t">{c.label}</span>
                   {!c.passed && <span className="hint">{c.hint}</span>}
                 </a>
@@ -91,6 +92,7 @@ export function Overview() {
           <section className="panel">
             <div className="panel-head">
               <h2>Preview servers</h2>
+              <span className="chip dim" title="Preview servers arrive with RipTide hosting">Example data</span>
               <span className="meta">Test changes before players see them</span>
             </div>
             {PREVIEWS.map((p) => (
@@ -107,7 +109,7 @@ export function Overview() {
           </section>
 
           <section className="panel">
-            <div className="panel-head"><h2>Deploy history</h2><span className="meta">Roll back to any point</span></div>
+            <div className="panel-head"><h2>Deploy history</h2><span className="chip dim" title="Deploy history arrives with RipTide hosting">Example data</span><span className="meta">Roll back to any point</span></div>
             <ul className="timeline">
               {DEPLOY_HISTORY.map((d, i) => (
                 <li key={d.id}>

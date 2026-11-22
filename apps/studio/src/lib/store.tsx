@@ -56,7 +56,15 @@ interface Store {
 
 const Ctx = createContext<Store | null>(null);
 
-export function StoreProvider({ children }: { children: ReactNode }) {
+/**
+ * Optional route prefix. Classic Studio uses none ("#/economy"); inside the
+ * RipTide Tools shell Studio lives under "studio/" ("#/studio/economy").
+ */
+export const RouteBase = createContext("");
+
+export function StoreProvider({ children, active = true }: { children: ReactNode; active?: boolean }) {
+  const activeRef = useRef(active);
+  activeRef.current = active;
   const [state, dispatch] = useReducer(reducer, undefined, () => ({ bp: initial(), past: [], future: [] }));
   const [savedAt, setSavedAt] = useState(Date.now());
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
@@ -82,6 +90,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // In the Tools shell Studio may be mounted but hidden: its shortcuts must not act then.
+      if (!activeRef.current) return;
       const target = e.target as HTMLElement;
       if (target.closest("input, textarea")) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
@@ -128,12 +138,27 @@ export function useStore() {
 }
 
 export function useRoute(): [string, (r: string) => void] {
-  const read = () => window.location.hash.replace(/^#\/?/, "") || "overview";
-  const [route, setRoute] = useState(read);
+  const base = useContext(RouteBase);
+  // Returns null when the hash belongs to another part of the shell, so Studio keeps its last section.
+  const read = () => {
+    const h = window.location.hash.replace(/^#\/?/, "");
+    if (!base) return h || "overview";
+    return h.startsWith(base) ? h.slice(base.length) || "overview" : null;
+  };
+  const [route, setRoute] = useState(() => read() ?? "overview");
   useEffect(() => {
-    const on = () => setRoute(read());
+    const on = () => {
+      const r = read();
+      if (r !== null) setRoute(r);
+    };
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
-  }, []);
-  return [route, (r) => (window.location.hash = `/${r}`)];
+  }, [base]);
+  return [route, (r) => (window.location.hash = `/${base}${r}`)];
+}
+
+/** Link target for a Studio section, respecting the route prefix. */
+export function useHref(): (section: string) => string {
+  const base = useContext(RouteBase);
+  return (section) => `#/${base}${section}`;
 }

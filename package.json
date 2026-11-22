@@ -7,12 +7,18 @@
   "type": "module",
   "author": "Dosuka (https://github.com/DosukaSOL)",
   "homepage": "https://github.com/DosukaSOL/RipTide",
-  "engines": { "node": ">=20" },
-  "workspaces": ["packages/*", "apps/*"],
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "dev": "node scripts/build-studio.mjs --serve",
     "build": "node scripts/build-cli.mjs && node scripts/build-studio.mjs",
-    "test": "node --import tsx --test packages/core/test/*.test.ts",
+    "test": "node --import tsx --test packages/core/test/*.test.ts packages/tools/test/*.test.ts",
+    "e2e": "node scripts/e2e-tools.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "riptide": "node packages/cli/dist/riptide.mjs",
     "screenshots": "node scripts/screenshots.mjs",

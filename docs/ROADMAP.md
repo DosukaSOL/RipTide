@@ -10,6 +10,7 @@ Riptide is being built ahead of GTA VI on PC. Dates depend on Rockstar, so this 
 - Plain-English rulebook with Discord and web output
 - FiveM adapter, docker stack, CLI
 - Studio design, brand and startup animation
+- RipTide Tools preview shell: ViceLab, Heist Ops, Interactive Map, Workspaces (see [TOOLS.md](TOOLS.md))
 
 ## Phase 1: Real servers on GTA V
 
@@ -17,6 +18,7 @@ Riptide is being built ahead of GTA VI on PC. Dates depend on Rockstar, so this 
 - Discord bot: role sync, applications, rules post, deploy announcements
 - Custom resource import with basic safety scanning
 - Public preview of the Studio
+- RipTide Tools shell replaces classic Studio once accepted
 
 ## Phase 2: Riptide hosting
 
@@ -25,6 +27,8 @@ Riptide is being built ahead of GTA VI on PC. Dates depend on Rockstar, so this 
 - Deploy history with rollback
 - Live tick time, player counts and economy after launch
 - Backups with point-in-time restore
+- Heist Ops crew rooms ([design](design/heist-sync.md))
+- Desktop app for RipTide Tools ([design](design/desktop-shell.md))
 
 ## Phase 3: GTA VI
 

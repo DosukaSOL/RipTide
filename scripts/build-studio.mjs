@@ -10,6 +10,10 @@ mkdirSync(out, { recursive: true });
 cpSync("apps/studio/index.html", `${out}/index.html`);
 cpSync("apps/studio/public", out, { recursive: true });
 cpSync("brand/mark.svg", `${out}/favicon.svg`);
+// The shell uses the real brand files directly, never redrawn copies.
+mkdirSync(`${out}/brand`, { recursive: true });
+cpSync("brand/mark.svg", `${out}/brand/mark.svg`);
+cpSync("brand/lockup.png", `${out}/brand/lockup.png`);
 
 const ctx = await context({
   entryPoints: { app: "apps/studio/src/main.tsx" },

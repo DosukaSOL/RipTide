@@ -67,6 +67,25 @@ These ideas are new for game servers, and most of them already work in the previ
   </tr>
 </table>
 
+## RipTide Tools (preview)
+
+Studio is getting company. **RipTide Tools** puts Studio and four companion tools in one app: **ViceLab** for frame-time benchmarks and image compare, **Heist Ops** for crew plans, an **Interactive Map** you can pop out to a second monitor, and **Workspaces** to arrange it all across your displays. Open tools stay running while you switch between them.
+
+It's behind a flag while we finish it. Add `?shell=tools` to the Studio address to try it, or `?shell=classic` to go back. Anything that needs GTA VI is clearly marked and switched off until the game is out on PC. There's no made-up map or mission data.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/tools-home.png" alt="RipTide Tools home with Studio, ViceLab, Heist Ops and Interactive Map cards"><br><sub><b>Home.</b> Every tool, and what's running.</sub></td>
+    <td width="50%"><img src="docs/screenshots/tools-vicelab.png" alt="ViceLab benchmark screen with a capture import and settings form"><br><sub><b>ViceLab.</b> Real frame times from your own captures.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/tools-heist.png" alt="Heist Ops plan with crew roles and a four-phase timeline"><br><sub><b>Heist Ops.</b> Roles, phases and checklists for your crew.</sub></td>
+    <td><img src="docs/screenshots/tools-map.png" alt="Interactive Map with filters, a schematic canvas and a pop-out button"><br><sub><b>Interactive Map.</b> Markers, filters and a second-screen pop-out.</sub></td>
+  </tr>
+</table>
+
+What's working, what's a demonstration, and what waits for GTA VI: **[docs/TOOLS.md](docs/TOOLS.md)**.
+
 ## What you can plug in
 
 Frameworks, inventories, voice, phones, HUDs, housing, garages, jobs, police and EMS tools, interiors, clothing, anti-cheat, admin panels, Discord, streaming tools, stores, analytics, visual presets and accessibility. The full map, with what works today and what's waiting on GTA VI, lives in **[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)**.
@@ -101,6 +120,7 @@ You'll need Node 20 or newer.
 npm install
 npm run build
 npm test
+npm run e2e   # browser tests, needs Playwright
 
 # Open the Studio at http://127.0.0.1:5173
 npm run dev
@@ -120,6 +140,7 @@ The preview runs entirely on your machine. It doesn't send data anywhere, and ho
 - [x] Plain-English rulebook with Discord and web output
 - [x] FiveM adapter and docker stack
 - [x] Studio design and startup animation
+- [x] RipTide Tools preview: ViceLab, Heist Ops, Interactive Map, Workspaces
 - [ ] Discord bot: role sync, applications, rules post
 - [ ] Riptide hosting with preview servers and rollbacks
 - [ ] Live economy and performance view after launch

@@ -13,7 +13,7 @@ import {
   LuCloud,
 } from "react-icons/lu";
 import { assessReadiness, checkCompatibility, compileRulebook } from "@riptide/core";
-import { useRoute, useStore } from "./lib/store";
+import { useHref, useRoute, useStore } from "./lib/store";
 import { Logo } from "./components/ui";
 import { Overview } from "./screens/Overview";
 import { World } from "./screens/World";
@@ -44,8 +44,9 @@ const NAV: NavItem[] = [
   { id: "deploy", label: "Deploy", icon: LuRocket, screen: Deploy, group: "ship" },
 ];
 
-export function App() {
+export function App({ embedded = false }: { embedded?: boolean } = {}) {
   const { bp, undo, canUndo } = useStore();
+  const href = useHref();
   const [route] = useRoute();
   const current = NAV.find((n) => n.id === route) ?? NAV[0]!;
   const Screen = current.screen;
@@ -69,12 +70,14 @@ export function App() {
   };
 
   return (
-    <div className="shell">
+    <div className={`shell${embedded ? " embedded" : ""}`}>
       <aside className="side">
-        <div className="brand">
-          <Logo size={30} />
-          <span className="brand-word">riptide</span>
-        </div>
+        {!embedded && (
+          <div className="brand">
+            <Logo size={30} />
+            <span className="brand-word">riptide</span>
+          </div>
+        )}
         <button className="switcher" aria-label="Switch server">
           <span className="switcher-art"><ServerArt seed={bp.meta.slug} /></span>
           <span>
@@ -92,7 +95,7 @@ export function App() {
             return (
               <div key={n.id} style={{ display: "contents" }}>
                 {groupStart && n.group === "ship" && <div className="nav-group">Ship it</div>}
-                <a href={`#/${n.id}`} data-id={n.id} aria-current={current.id === n.id ? "page" : undefined}>
+                <a href={href(n.id)} data-id={n.id} aria-current={current.id === n.id ? "page" : undefined}>
                   <Icon />
                   {n.label}
                   {c && <span className={`count ${c.bad ? "bad" : ""}`}>{c.n}</span>}
@@ -104,6 +107,9 @@ export function App() {
         <div className="side-foot">
           <span className="engine-pill"><span className="dot" />FiveM ready</span>
           <span className="engine-pill"><span className="dot warn" />GTA VI waiting on Rockstar</span>
+          {!embedded && (
+            <a href="?shell=tools" className="try-tools">Try the RipTide Tools preview</a>
+          )}
         </div>
       </aside>
 
@@ -120,7 +126,7 @@ export function App() {
             <LuUndo2 />Undo
           </button>
           {current.id !== "deploy" && (
-            <a className="btn primary small" href="#/deploy" style={{ textDecoration: "none" }}>
+            <a className="btn primary small" href={href("deploy")} style={{ textDecoration: "none" }}>
               <LuRocket />Deploy
             </a>
           )}
