@@ -9,7 +9,8 @@ import { join } from "node:path";
 const exe = process.argv[2];
 if (!exe || !existsSync(exe)) throw new Error("Pass the path to the unpacked app executable.");
 const dataDir = mkdtempSync(join(tmpdir(), "riptide-data-"));
-const env = { ...process.env, RIPTIDE_DATA_DIR: dataDir };
+const profile = mkdtempSync(join(tmpdir(), "riptide-profile-"));
+const env = { ...process.env, RIPTIDE_DATA_DIR: dataDir, RIPTIDE_USER_DATA: profile };
 const args = process.platform === "linux" ? ["--no-sandbox"] : []; // containers have no setuid sandbox helper
 let passed = 0;
 const step = async (name, fn) => {

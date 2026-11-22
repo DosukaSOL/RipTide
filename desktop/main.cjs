@@ -16,6 +16,8 @@ const ALLOWED_PERMISSIONS = new Set(["window-management", "clipboard-sanitized-w
 
 protocol.registerSchemesAsPrivileged([{ scheme: "app", privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
+// Automated tests run with their own profile so earlier runs can't leak in.
+if (process.env.RIPTIDE_USER_DATA) app.setPath("userData", process.env.RIPTIDE_USER_DATA);
 if (!app.requestSingleInstanceLock()) app.quit();
 
 /* ---------- where data lives ---------- */
