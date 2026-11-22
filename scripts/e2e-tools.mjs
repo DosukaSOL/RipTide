@@ -355,6 +355,54 @@ await check("keyboard: map pans and zooms, Alt+number switches tools, focus is v
   await ctx.close();
 });
 
+console.log("\nDesktop app storage");
+await check("desktop: saved files load first and every change is written to disk", async () => {
+  const { ctx, page, errors } = await fresh();
+  // A stand-in for the desktop preload bridge, backed by an object instead of files.
+  await ctx.addInitScript(() => {
+    const files = JSON.parse(sessionStorage.getItem("__files") || "null") ?? {
+      "riptide.heist.v1": JSON.stringify({ plans: [{ schema: 1, id: "p1", name: "From disk", description: "", createdAt: 1, updatedAt: 1, roles: [], phases: [], notes: "saved on disk" }], activeId: "p1" }),
+    };
+    window.__writes = [];
+    window.riptideDesktop = {
+      readAll: () => ({ ...files }),
+      write: (k, v) => {
+        window.__writes.push([k, v]);
+        if (v === null) delete files[k];
+        else files[k] = v;
+        sessionStorage.setItem("__files", JSON.stringify(files));
+        return true;
+      },
+      dataDir: () => "C:\\Users\\you\\Documents\\RipTide",
+      openDataDir: () => (window.__opened = true),
+      version: () => "0.1.0",
+    };
+  });
+  await page.goto(tools("heist"));
+  await page.getByRole("heading", { name: "From disk" }).waitFor();
+  assert.equal(await page.inputValue("#rt-plan-notes"), "saved on disk", "files win over browser storage");
+  await page.fill("#rt-plan-notes", "changed in the app");
+  await page.waitForFunction(() => window.__writes.some(([k, v]) => k === "riptide.heist.v1" && v && v.includes("changed in the app")));
+  assert.ok(!(await page.evaluate(() => window.__writes.some(([k]) => !k.startsWith("riptide.")))), "only RipTide keys are written");
+  await page.goto(tools("settings"));
+  await page.getByText("Saved as files on this computer").waitFor();
+  await page.getByRole("button", { name: "Open folder" }).click();
+  assert.equal(await page.evaluate(() => window.__opened), true);
+  await page.reload();
+  await page.goto(tools("heist"));
+  assert.equal(await page.inputValue("#rt-plan-notes"), "changed in the app", "survives a restart");
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("browser: settings explain where data is kept", async () => {
+  const { ctx, page } = await fresh();
+  await page.goto(tools("settings"));
+  await page.getByText("Saved in this browser").waitFor();
+  assert.equal(await page.getByRole("link", { name: /Get the app/ }).getAttribute("href"), "https://dosukasol.github.io/RipTide/#download");
+  await ctx.close();
+});
+
 console.log("\nResilience");
 await check("corrupt stored data never breaks the app", async () => {
   const { ctx, page, errors } = await fresh();

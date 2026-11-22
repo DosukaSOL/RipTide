@@ -18,7 +18,7 @@
     "dev": "node scripts/build-studio.mjs --serve",
     "build": "node scripts/build-cli.mjs && node scripts/build-studio.mjs",
     "site": "node scripts/build-site.mjs --serve",
-    "test": "node --import tsx --test packages/core/test/*.test.ts packages/tools/test/*.test.ts",
+    "test": "node --import tsx --test packages/core/test/*.test.ts packages/tools/test/*.test.ts desktop/test/*.test.cjs",
     "e2e": "node scripts/e2e-tools.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "riptide": "node packages/cli/dist/riptide.mjs",

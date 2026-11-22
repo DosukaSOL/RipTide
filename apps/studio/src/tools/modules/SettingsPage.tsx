@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { LuDownload, LuUpload, LuRotateCcw } from "react-icons/lu";
+import { LuDownload, LuUpload, LuRotateCcw, LuFolderOpen, LuHardDrive, LuGlobe } from "react-icons/lu";
+import { desktopBridge, desktopWriteFailed } from "../../desktop";
 import { KEYS, Settings } from "@riptide/tools";
 import { PageHeader, SettingRow, Switch, useShell } from "../ui";
 import { HeaderRight } from "./common";
@@ -93,6 +94,7 @@ export function SettingsPage() {
 
         <section className="rt-panel rt-pad" aria-labelledby="rt-st-data">
           <h2 id="rt-st-data" style={{ marginBottom: 8 }}>Your data</h2>
+          <SaveLocation />
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "8px 0 16px" }}>
             <button className="rt-btn rt-sm" onClick={exportAll}><LuDownload />Export everything</button>
             <button className="rt-btn rt-sm" onClick={() => input.current?.click()}><LuUpload />Restore a backup</button>
@@ -115,6 +117,39 @@ export function SettingsPage() {
           <p className="rt-hint">Export before resetting. Resets can't be undone.</p>
         </section>
       </div>
+    </div>
+  );
+}
+
+/** Where data is kept: real files in the desktop app, browser storage on the web. */
+function SaveLocation() {
+  const bridge = desktopBridge();
+  if (bridge) {
+    let dir = "";
+    try {
+      dir = bridge.dataDir();
+    } catch {
+      dir = "";
+    }
+    return (
+      <div className={`rt-saveloc${desktopWriteFailed() ? " rt-warn" : ""}`}>
+        <LuHardDrive aria-hidden="true" />
+        <div>
+          <b>{desktopWriteFailed() ? "Some changes couldn't be saved to disk" : "Saved as files on this computer"}</b>
+          <span className="rt-saveloc-path" title={dir}>{dir}</span>
+        </div>
+        <button className="rt-btn rt-sm" onClick={() => bridge.openDataDir()}><LuFolderOpen />Open folder</button>
+      </div>
+    );
+  }
+  return (
+    <div className="rt-saveloc">
+      <LuGlobe aria-hidden="true" />
+      <div>
+        <b>Saved in this browser</b>
+        <span>Clearing site data or using a private window removes it. Export a backup, or use the desktop app to keep everything as files on your computer.</span>
+      </div>
+      <a className="rt-btn rt-sm" href="https://dosukasol.github.io/RipTide/#download" target="_blank" rel="noopener noreferrer"><LuDownload />Get the app</a>
     </div>
   );
 }

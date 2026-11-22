@@ -1,0 +1,56 @@
+{
+  "name": "riptide-desktop",
+  "productName": "RipTide Tools",
+  "version": "0.1.0",
+  "description": "RipTide Tools for your desktop: every tool for your GTA life, saved as files on your computer.",
+  "main": "main.cjs",
+  "private": true,
+  "license": "UNLICENSED",
+  "homepage": "https://dosukasol.github.io/RipTide/",
+  "author": {
+    "name": "Dosuka",
+    "email": "261566757+DosukaSOL@users.noreply.github.com"
+  },
+  "scripts": {
+    "copy-app": "node scripts/copy-app.mjs",
+    "start": "npm run copy-app && electron .",
+    "dist": "npm run copy-app && electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "io.github.dosukasol.riptide",
+    "productName": "RipTide Tools",
+    "copyright": "Copyright © 2026 Dosuka",
+    "files": ["main.cjs", "preload.cjs", "storage.cjs", "app/**/*", "icon.png", "package.json"],
+    "directories": { "output": "release", "buildResources": "build" },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "artifactName": "RipTide-Windows-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "RipTide Tools"
+    },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "artifactName": "RipTide-macOS.${ext}",
+      "category": "public.app-category.utilities",
+      "identity": null,
+      "hardenedRuntime": false
+    },
+    "linux": {
+      "target": [{ "target": "AppImage", "arch": ["x64"] }, { "target": "deb", "arch": ["x64"] }],
+      "artifactName": "RipTide-Linux.${ext}",
+      "executableName": "riptide-tools",
+      "category": "Utility",
+      "synopsis": "Every tool for your GTA life, in one app",
+      "maintainer": "Dosuka <261566757+DosukaSOL@users.noreply.github.com>"
+    }
+  }
+}

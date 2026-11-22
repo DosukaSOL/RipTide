@@ -15,3 +15,6 @@ coverage/
 *.local.riptide.json
 .video/
 .site/
+desktop/app/
+desktop/release/
+desktop/node_modules/

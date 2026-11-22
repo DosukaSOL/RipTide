@@ -1,0 +1,92 @@
+name: Desktop app
+
+# Builds RipTide Tools for Windows, macOS and Linux. Pushing a tag like v0.1.0
+# also publishes a GitHub Release with the installers attached.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      - run: npm test
+      - run: npm run build
+      - run: npm install --no-audit --no-fund
+        working-directory: desktop
+
+      - name: Build (Windows, Linux)
+        if: runner.os != 'macOS'
+        run: npm run dist
+        working-directory: desktop
+
+      # No Apple developer certificate yet: build the app, sign it ad hoc so it
+      # runs on Apple silicon, then package the signed app into a DMG.
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        working-directory: desktop
+        run: |
+          npm run copy-app
+          npx electron-builder --mac --universal --dir --publish never
+          codesign --force --deep --sign - "release/mac-universal/RipTide Tools.app"
+          npx electron-builder --mac dmg --universal --prepackaged "release/mac-universal/RipTide Tools.app" --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riptide-${{ runner.os }}
+          if-no-files-found: error
+          path: |
+            desktop/release/RipTide-*.exe
+            desktop/release/RipTide-*.dmg
+            desktop/release/RipTide-*.AppImage
+            desktop/release/RipTide-*.deb
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          ls -la dist
+          cat > notes.md <<'NOTES'
+          RipTide Tools for your desktop. Everything is saved as files in a RipTide folder on your computer, works offline, and needs no account.
+
+          | System | Download |
+          | --- | --- |
+          | Windows 10 and 11 | `RipTide-Windows-Setup.exe` |
+          | macOS 12 or newer (Intel and Apple silicon) | `RipTide-macOS.dmg` |
+          | Linux | `RipTide-Linux.AppImage` or `RipTide-Linux.deb` |
+
+          These builds aren't code-signed yet, so your system may warn you the first time:
+          - **Windows:** on "Windows protected your PC", click **More info**, then **Run anyway**.
+          - **macOS:** right-click the app, choose **Open**, then **Open** again. If macOS says it's damaged, run `xattr -cr "/Applications/RipTide Tools.app"` in Terminal.
+          - **Linux AppImage:** make it executable (`chmod +x RipTide-Linux.AppImage`), then run it.
+
+          Your data is saved in `Documents/RipTide`. Use **File → Open data folder** to find it.
+          NOTES
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --title "RipTide Tools $TAG" --notes-file notes.md

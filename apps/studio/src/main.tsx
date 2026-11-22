@@ -1,3 +1,4 @@
+import "./desktop"; // must run first: makes saved data durable before anything reads it
 import "./styles.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
