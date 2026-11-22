@@ -31,7 +31,8 @@ export function Help() {
             <ul className="rt-steps" style={{ marginTop: 12 }}>
               <li>RipTide is independent and isn't affiliated with Rockstar Games or Take-Two Interactive.</li>
               <li>Nothing is uploaded. Captures, screenshots, plans and markers stay on this device.</li>
-              <li>GTA VI features wait for the PC release and Rockstar's server tools. Until then the map has no GTA VI data and ViceLab has no GTA VI tests.</li>
+              <li>GTA VI features that need the game on PC, like ViceLab tests and server support, wait for the PC release and Rockstar's server tools.</li>
+              <li>The Interactive Map uses Rockstar's official map of Leonida. Its places come from the gtadb.org community (CC BY 4.0) and may not all be exact yet.</li>
               <li>RipTide never reads game memory, injects into game processes or automates gameplay.</li>
               <li>Studio deploys are simulated until RipTide hosting opens. Building FiveM server files works today.</li>
             </ul>

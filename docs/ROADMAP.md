@@ -43,7 +43,9 @@ Starts the moment Rockstar publishes PC server tooling.
 
 | Question | What we know | Last checked |
 | --- | --- | --- |
-| GTA VI PC release | Reported for early 2027, not confirmed | Nov 2026 |
-| GTA VI Online | No official date, 2027 expected | Nov 2026 |
+| GTA VI on consoles | Out since 19 November 2026 on PS5 and Xbox Series X\|S | Nov 2026 |
+| GTA VI PC release | Not announced | Nov 2026 |
+| GTA VI Online | No official date | Nov 2026 |
+| Official map | Rockstar released the map of Leonida as a free download at launch. RipTide's Interactive Map uses it | Nov 2026 |
 | Community servers | Rockstar owns Cfx.re (FiveM), nothing announced for GTA VI | Nov 2026 |
-| Modding policy | Not announced | Nov 2026 |
+| Modding policy | Rockstar's September 2026 guidelines limit multiplayer mods to its own Creator Platform. Nothing GTA VI server-specific yet | Nov 2026 |

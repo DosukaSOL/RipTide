@@ -11,7 +11,7 @@ const DATA_KEYS: { key: string; label: string }[] = [
   { key: "riptide.blueprint.v1", label: "RipTide Studio Blueprint" },
   { key: KEYS.vicelab, label: "ViceLab runs and hardware" },
   { key: KEYS.heist, label: "Heist Ops plans" },
-  { key: KEYS.map, label: "Map markers, filters and packs" },
+  { key: KEYS.map, label: "Map progress, markers, filters and packs" },
   { key: KEYS.workspaces, label: "Workspaces" },
   { key: KEYS.settings, label: "Settings" },
 ];

@@ -11,7 +11,7 @@ const CARDS: { id: ToolId; icon: typeof LuMap; title: string; body: string; badg
   { id: "studio", icon: LuLayoutPanelLeft, title: "RipTide Studio", body: "Design, validate and deploy your community server without writing code.", badge: "FiveM ready", tone: "sea", cta: "Open Studio", feature: true },
   { id: "vicelab", icon: LuChartLine, title: "ViceLab", body: "Measure performance and compare visual quality on your own hardware.", badge: "Preview", cta: "Open ViceLab" },
   { id: "heist", icon: LuUsers, title: "Heist Ops", body: "Build a plan, assign roles and coordinate with your crew.", badge: "Preview", cta: "Open Heist Ops" },
-  { id: "map", icon: LuMap, title: "Interactive Map", body: "Browse verified locations, save discoveries and plan routes.", badge: "Map framework", cta: "Open the map" },
+  { id: "map", icon: LuMap, title: "Interactive Map", body: "Explore the official map of Leonida, track what you've found and add your own markers.", badge: "Official map", cta: "Open the map" },
 ];
 
 function Sunset() {

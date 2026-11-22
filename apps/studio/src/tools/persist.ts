@@ -20,6 +20,20 @@ export function usePersisted<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, 
   const [error, setError] = useState("");
   const external = useRef(false);
   const first = useRef(true);
+  /** State waiting to be written, so it can be saved at once if the page closes. */
+  const pending = useRef<T | null>(null);
+
+  const write = useCallback(
+    (value: T) => {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        setError("");
+      } catch {
+        setError("This device's storage is full or blocked, so recent changes are only kept until you close RipTide. Export your data to keep it.");
+      }
+    },
+    [key],
+  );
 
   useEffect(() => {
     if (first.current) {
@@ -30,21 +44,37 @@ export function usePersisted<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, 
       external.current = false;
       return;
     }
+    pending.current = state;
     const t = setTimeout(() => {
-      try {
-        localStorage.setItem(key, JSON.stringify(state));
-        setError("");
-      } catch {
-        setError("This device's storage is full or blocked, so recent changes are only kept until you close RipTide. Export your data to keep it.");
-      }
+      pending.current = null;
+      write(state);
     }, 120);
     return () => clearTimeout(t);
-  }, [key, state]);
+  }, [state, write]);
+
+  // Never lose the last change: write immediately when the page is hidden, closed or unmounted.
+  useEffect(() => {
+    const flush = () => {
+      if (pending.current === null) return;
+      const v = pending.current;
+      pending.current = null;
+      write(v);
+    };
+    const onVis = () => document.visibilityState === "hidden" && flush();
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVis);
+      flush();
+    };
+  }, [write]);
 
   useEffect(() => {
     const on = (e: StorageEvent) => {
       if (e.key !== key) return;
       external.current = true;
+      pending.current = null; // the other window's newer state wins
       setState(readStored(e.newValue, schema, fallback()));
     };
     window.addEventListener("storage", on);

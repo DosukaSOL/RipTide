@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
 const root = resolve("apps/studio/dist");
-const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".ttf": "font/ttf", ".otf": "font/otf" };
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json", ".ttf": "font/ttf", ".otf": "font/otf" };
 const server = createServer(async (req, res) => {
   const p = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname)).replace(/^([/\\])+/, "");
   const f = join(root, p || "index.html");
@@ -31,7 +31,9 @@ const browser = await chromium.launch(arg("--chrome") ? { executablePath: arg("-
 
 let passed = 0;
 const failures = [];
+const only = arg("--only");
 async function check(name, fn) {
+  if (only && !name.toLowerCase().includes(only.toLowerCase())) return;
   try {
     await fn();
     passed++;
@@ -46,8 +48,14 @@ async function fresh(viewport = { width: 1920, height: 1080 }, dpr = 1, extra = 
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: dpr, ...extra });
   const page = await ctx.newPage();
   const errors = [];
-  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
-  page.on("pageerror", (e) => errors.push(String(e)));
+  const watch = (p) => {
+    p.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+    p.on("pageerror", (e) => errors.push(String(e)));
+    p.on("response", (r) => r.status() >= 400 && errors.push(`${r.status()} ${new URL(r.url()).pathname}`));
+    p.on("requestfailed", (r) => errors.push(`failed ${new URL(r.url()).pathname}`));
+  };
+  watch(page);
+  ctx.on("page", watch);
   return { ctx, page, errors };
 }
 const tools = (hash) => `${base}/?shell=tools&splash=0#/${hash}`;
@@ -176,51 +184,167 @@ await check("start benchmark runs an honest timed session", async () => {
   await ctx.close();
 });
 
-console.log("\nInteractive Map and detached windows");
-await check("personal marker, filters and pop-out keep their state", async () => {
+console.log("\nInteractive Map");
+const placesJson = JSON.parse(await readFile(join(root, "map/leonida/places.json"), "utf8"));
+const safehouse = placesJson.places.find((p) => p[0] === "L16");
+const stageCentre = async (page) => {
+  const b = await page.locator(".rt-map-stage").boundingBox();
+  return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+};
+
+await check("official map loads tiles, places and credits with no failed requests", async () => {
   const { ctx, page, errors } = await fresh();
   await page.goto(tools("map"));
-  await page.getByRole("button", { name: "Create a personal marker" }).click();
-  const stage = page.locator(".rt-map-stage");
-  const box = await stage.boundingBox();
-  await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.4);
-  await page.locator(".rt-marker").first().waitFor();
-  await page.fill("#rt-mk-t", "Hideout");
-  await page.getByLabel("My notes").check();
-  await page.waitForTimeout(300);
-  const [popup] = await Promise.all([page.waitForEvent("popup"), page.getByRole("button", { name: /Pop out map/ }).click()]);
-  await popup.waitForSelector('section[data-module="map"]');
-  assert.ok(await popup.getByLabel("My notes").isChecked(), "filter preserved in the new window");
-  await popup.getByRole("button", { name: /Hideout/ }).waitFor();
-  await page.getByText("Interactive Map is open in its own window").waitFor();
-  await popup.close();
-  await page.locator(".rt-map-stage").waitFor({ timeout: 10000 });
-  assert.ok(await page.getByLabel("My notes").isChecked(), "filter still set after docking");
+  await page.locator(".rt-tiles image").first().waitFor({ state: "attached" });
+  await page.getByText(new RegExp(`${placesJson.places.length.toLocaleString("en-US")} places shown`)).waitFor();
+  assert.ok((await page.locator(".rt-marker").count()) >= placesJson.places.length);
+  await page.locator(".rt-map-credit").getByText(/Rockstar Games/).waitFor();
+  assert.equal(await page.locator('.rt-map-credit a[href="https://map.gtadb.org"]').getAttribute("rel"), "noopener noreferrer");
+  // Zoom all the way in and pan around: every tile requested must exist.
+  const c = await stageCentre(page);
+  await page.mouse.move(c.x, c.y);
+  for (let i = 0; i < 12; i++) await page.mouse.wheel(0, -400);
+  for (const [dx, dy] of [[300, 0], [0, 300], [-600, 0], [0, -600]]) {
+    await page.mouse.move(c.x, c.y);
+    await page.mouse.down();
+    await page.mouse.move(c.x + dx, c.y + dy, { steps: 5 });
+    await page.mouse.up();
+  }
+  await page.waitForTimeout(500);
   assert.deepEqual(errors, []);
   await ctx.close();
 });
 
-await check("map packs are reviewed before they show, and count honestly", async () => {
-  const { ctx, page } = await fresh();
+await check("search finds a place and the map centres exactly on its marker", async () => {
+  const { ctx, page, errors } = await fresh({ width: 1920, height: 1080 }, 1, { reducedMotion: "reduce" });
   await page.goto(tools("map"));
-  const pack = join(tmpdir(), `riptide-pack-${process.pid}.json`);
-  await writeFile(pack, JSON.stringify({ format: "riptide-map-pack", schema: 1, id: "test", name: "Test pack", version: "1.0.0", map: "schematic-v1", publisher: "QA", provenance: "official", records: [{ id: "a", title: "Pier", category: "activities", x: 400, y: 400 }] }));
-  await page.locator('input[type="file"]').last().setInputFiles(pack);
-  await page.getByText(/isn't signed/).waitFor();
-  assert.equal(await page.locator(".rt-marker").count(), 0, "hidden until reviewed");
-  await page.getByText("Reviewed, show on the map").click();
-  await page.locator(".rt-marker").first().waitFor();
-  await page.getByText("Community").first().waitFor();
+  await page.getByText(/places shown/).waitFor();
+  await page.fill("#rt-map-q", "y vice");
+  await page.getByRole("option", { name: /Y Vice City.*Safehouse/ }).click();
+  await page.getByRole("heading", { name: "Y Vice City" }).waitFor();
+  await page.getByText(safehouse[8]).waitFor(); // real-world inspiration
+  await page.getByText("You can go in").waitFor();
+  await page.waitForTimeout(300);
+  const m = await page.locator(".rt-selected circle").nth(1).boundingBox();
+  const c = await stageCentre(page);
+  assert.ok(Math.abs(m.x + m.width / 2 - c.x) < 2 && Math.abs(m.y + m.height / 2 - c.y) < 2, "marker is drawn where the projection says");
+  await page.locator(".rt-place-pos").getByText(`X ${Math.round(safehouse[5]).toLocaleString("en-US")} · Y ${Math.round(safehouse[6]).toLocaleString("en-US")}`).waitFor();
+  await page.fill("#rt-map-q", "qqqqzzzz");
+  await page.getByText("Nothing matches these filters.").waitFor();
+  assert.deepEqual(errors, []);
   await ctx.close();
 });
 
-await check("keyboard: map pans/zooms, Alt+number switches tools, focus is visible", async () => {
+await check("found tracking, hide found and separate playthroughs", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(tools("map"));
+  await page.getByText(/places shown/).waitFor();
+  await page.fill("#rt-map-q", "Y Vice City");
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "Mark as found" }).click();
+  await page.locator(".rt-progress-head").getByText(/^1$/).waitFor();
+  await page.locator(".rt-cat", { hasText: "Safehouses" }).getByText(/^1\/\d+$/).waitFor();
+  await page.fill("#rt-map-q", "");
+  await page.getByLabel("Hide found").check();
+  await page.getByText(new RegExp(`${(placesJson.places.length - 1).toLocaleString("en-US")} places shown`)).waitFor();
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.fill("#rt-prof-name", "Second run");
+  await page.keyboard.press("Enter");
+  await page.locator(".rt-progress-head").getByText(/^0$/).waitFor();
+  await page.selectOption("#rt-prof", { label: "Main playthrough" });
+  await page.locator(".rt-progress-head").getByText(/^1$/).waitFor();
+  await page.reload();
+  await page.locator(".rt-progress-head").getByText(/^1$/).waitFor();
+  await page.locator(".rt-map-stage").focus();
+  await page.keyboard.press("n");
+  await page.locator(".rt-place-title").waitFor();
+  assert.notEqual(await page.locator(".rt-place-title").innerText(), "Y Vice City", "next unfound skips found places");
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("personal marker, categories and pop-out keep their state", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(tools("map"));
+  await page.getByText(/places shown/).waitFor();
+  await page.getByRole("button", { name: "Add a personal marker" }).click();
+  const c = await stageCentre(page);
+  await page.mouse.click(c.x + 40, c.y + 30);
+  await page.locator("#rt-mk-t").waitFor();
+  await page.fill("#rt-mk-t", "Hideout");
+  await page.selectOption("#rt-mk-c", "collectibles");
+  await page.locator(".rt-cat", { hasText: "Collectibles" }).getByText("0/1").waitFor();
+  await page.getByRole("button", { name: "Mark as found" }).click();
+  await page.locator(".rt-cat", { hasText: "Collectibles" }).getByText("1/1").waitFor();
+  await page.locator(".rt-cat", { hasText: "My markers" }).getByText("1").waitFor();
+  await page.locator(".rt-cat", { hasText: "Landmarks" }).locator("input").uncheck();
+  await page.waitForTimeout(400);
+  const [popup] = await Promise.all([page.waitForEvent("popup"), page.getByRole("button", { name: /Pop out map/ }).click()]);
+  await popup.waitForSelector('section[data-module="map"]');
+  await popup.getByText(/places shown/).waitFor();
+  assert.equal(await popup.locator(".rt-cat", { hasText: "Landmarks" }).locator("input").isChecked(), false, "filter kept in the new window");
+  await popup.fill("#rt-map-q", "hideout");
+  await popup.getByRole("option", { name: /Hideout/ }).waitFor();
+  await page.getByText("Interactive Map is open in its own window").waitFor();
+  await popup.close();
+  await page.locator(".rt-map-stage").waitFor({ timeout: 10000 });
+  assert.equal(await page.locator(".rt-cat", { hasText: "Landmarks" }).locator("input").isChecked(), false);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("map packs are reviewed first; packs for the old placeholder map are refused", async () => {
   const { ctx, page } = await fresh();
   await page.goto(tools("map"));
+  await page.getByText(/places shown/).waitFor();
+  const before = await page.locator(".rt-marker").count();
+  const pack = join(tmpdir(), `riptide-pack-${process.pid}.json`);
+  await writeFile(pack, JSON.stringify({ format: "riptide-map-pack", schema: 1, id: "test", name: "Test pack", version: "1.0.0", map: "leonida-v1", publisher: "QA", provenance: "official", records: [{ id: "a", title: "QA Pier", category: "activities", x: 1500, y: 300 }] }));
+  await page.locator('input[type="file"]').last().setInputFiles(pack);
+  await page.getByText(/isn't signed/).waitFor();
+  assert.equal(await page.locator(".rt-marker").count(), before, "hidden until reviewed");
+  await page.getByText("Reviewed, show on the map").click();
+  await page.waitForFunction((n) => document.querySelectorAll(".rt-marker").length === n + 1, before);
+  const old = join(tmpdir(), `riptide-oldpack-${process.pid}.json`);
+  await writeFile(old, JSON.stringify({ format: "riptide-map-pack", schema: 1, id: "old", name: "Old", version: "1.0.0", map: "schematic-v1", provenance: "community", records: [] }));
+  await page.locator('input[type="file"]').last().setInputFiles(old);
+  await page.getByRole("alert").filter({ hasText: /old placeholder map/ }).waitFor();
+  await ctx.close();
+});
+
+await check("old placeholder-map data is cleaned up honestly", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(tools("home"));
+  await page.evaluate(() => localStorage.setItem("riptide.map.v1", JSON.stringify({ markers: [{ id: "me:1" }, { id: "me:2" }] })));
+  await page.goto(tools("map"));
+  await page.getByText("You have 2 markers from the old placeholder map").waitFor();
+  await page.getByRole("button", { name: "Remove old markers" }).click();
+  assert.equal(await page.evaluate(() => localStorage.getItem("riptide.map.v1")), null);
+  await page.evaluate(() => localStorage.setItem("riptide.map.v1", JSON.stringify({ markers: [] })));
+  await page.reload();
+  await page.getByText(/places shown/).waitFor();
+  assert.equal(await page.evaluate(() => localStorage.getItem("riptide.map.v1")), null, "empty old data removed silently");
+  assert.equal(await page.getByText(/old placeholder map/).count(), 0);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("keyboard: map pans and zooms, Alt+number switches tools, focus is visible", async () => {
+  const { ctx, page } = await fresh();
+  await page.goto(tools("map"));
+  const zoomOf = () => page.evaluate(() => Number(/zoom (-?[\d.]+)/.exec(document.querySelector(".rt-map-stage")?.getAttribute("aria-label") ?? "")?.[1]));
+  await page.getByText(/places shown/).waitFor();
+  await page.waitForTimeout(300);
+  const home = await zoomOf();
   await page.locator(".rt-map-stage").focus();
   await page.keyboard.press("+");
-  await page.waitForFunction(() => /zoom 1\.3x/.test(document.querySelector(".rt-map-stage")?.getAttribute("aria-label") ?? ""));
+  await page.waitForFunction((z) => Number(/zoom (-?[\d.]+)/.exec(document.querySelector(".rt-map-stage")?.getAttribute("aria-label") ?? "")?.[1]) >= z + 0.4, home);
   await page.keyboard.press("0");
+  await page.waitForTimeout(400);
+  assert.equal(await zoomOf(), home, "0 shows all of Leonida again");
+  await page.keyboard.press("/");
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "rt-map-q");
+  await page.locator(".rt-map-stage").focus(); // tool shortcuts are ignored while typing
   await page.keyboard.press("Alt+3");
   await page.waitForFunction(() => location.hash === "#/vicelab");
   await page.goto(tools("home"));
@@ -236,7 +360,8 @@ await check("corrupt stored data never breaks the app", async () => {
   const { ctx, page, errors } = await fresh();
   await page.goto(tools("home"));
   await page.evaluate(() => {
-    localStorage.setItem("riptide.map.v1", "{not json");
+    localStorage.setItem("riptide.map.v2", "{not json");
+    localStorage.setItem("riptide.map.v1", "{also not json");
     localStorage.setItem("riptide.heist.v1", JSON.stringify({ plans: [{ schema: 99 }] }));
     localStorage.setItem("riptide.workspaces.v1", JSON.stringify({ list: [] }));
     localStorage.setItem("riptide.blueprint.v1", "garbage");

@@ -70,17 +70,40 @@ export function StoreProvider({ children, active = true }: { children: ReactNode
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
   const nextId = useRef(1);
 
+  const unsaved = useRef<typeof state.bp | null>(null);
+  const save = useCallback((bp: typeof state.bp) => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(bp));
+    } catch {
+      /* private mode: keep working in memory */
+    }
+  }, []);
   useEffect(() => {
+    unsaved.current = state.bp;
     const t = setTimeout(() => {
-      try {
-        localStorage.setItem(KEY, JSON.stringify(state.bp));
-      } catch {
-        /* private mode: keep working in memory */
-      }
+      unsaved.current = null;
+      save(state.bp);
       setSavedAt(Date.now());
     }, 300);
     return () => clearTimeout(t);
-  }, [state.bp]);
+  }, [state.bp, save]);
+  // Save the last edit straight away if the page is closed or hidden before the timer runs.
+  useEffect(() => {
+    const flush = () => {
+      if (unsaved.current === null) return;
+      const bp = unsaved.current;
+      unsaved.current = null;
+      save(bp);
+    };
+    const onVis = () => document.visibilityState === "hidden" && flush();
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVis);
+      flush();
+    };
+  }, [save]);
 
   const toast = useCallback((msg: string) => {
     const id = nextId.current++;

@@ -14,6 +14,8 @@ cpSync("brand/mark.svg", `${out}/favicon.svg`);
 mkdirSync(`${out}/brand`, { recursive: true });
 cpSync("brand/mark.svg", `${out}/brand/mark.svg`);
 cpSync("brand/lockup.png", `${out}/brand/lockup.png`);
+// Leonida map tiles and places (see scripts/map/import-gtadb.mjs and THIRD_PARTY_NOTICES.md).
+cpSync("apps/studio/assets/map", `${out}/map`, { recursive: true });
 
 const ctx = await context({
   entryPoints: { app: "apps/studio/src/main.tsx" },

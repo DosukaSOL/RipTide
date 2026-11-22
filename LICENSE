@@ -35,6 +35,11 @@ Third-party fonts bundled in apps/studio/public/fonts keep their own licenses:
 DM Sans and Anonymous Pro (SIL Open Font License 1.1) and TeX Gyre Adventor
 (GUST Font License).
 
+The Leonida map in apps/studio/assets/map is not covered by this notice. Its
+map imagery is Rockstar Games' official map of Leonida, and its place data
+comes from gtadb.org and contributors under CC BY 4.0. See
+THIRD_PARTY_NOTICES.md.
+
 Riptide is an independent project. It is not affiliated with, endorsed by or
 sponsored by Rockstar Games, Take-Two Interactive or Cfx.re. Grand Theft
 Auto, GTA, GTA V and GTA VI are trademarks of their respective owners and are

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Plan } from "./heist";
-import { MapRecord, Provenance } from "./map";
+import { MapRecord, Provenance, CategoryEnum, DEFAULT_VIEW } from "./map";
 
 /**
  * Versioned schemas for everything RipTide Tools keeps on this device.
@@ -13,9 +13,12 @@ export const KEYS = {
   settings: "riptide.settings.v1",
   vicelab: "riptide.vicelab.v1",
   heist: "riptide.heist.v1",
-  map: "riptide.map.v1",
+  map: "riptide.map.v2",
   workspaces: "riptide.workspaces.v1",
 } as const;
+
+/** Keys from earlier previews. Read once so their data can be cleaned up, never written. */
+export const LEGACY_KEYS = { map: "riptide.map.v1" } as const;
 
 export const Flags = z.object({ toolsShell: z.boolean().default(false) });
 export type Flags = z.infer<typeof Flags>;
@@ -93,30 +96,42 @@ const Pack = z.object({
   records: z.array(MapRecord).max(20000),
 });
 
+const Hidden = z.array(z.union([CategoryEnum, z.literal("mine")])).max(20);
+const FilterShape = {
+  hidden: Hidden.default([]),
+  region: z.string().max(60).default(""),
+  query: z.string().max(120).default(""),
+  favoritesOnly: z.boolean().default(false),
+  hideFound: z.boolean().default(false),
+};
+const Profile = z.object({
+  id: z.string().min(1).max(40),
+  name: z.string().min(1).max(40),
+  found: z.array(z.string().max(80)).max(50000).default([]),
+});
+const DEFAULT_PROFILE = { id: "main", name: "Main playthrough", found: [] as string[] };
+
 export const MapState = z.object({
-  filter: z
-    .object({
-      categories: z.array(z.enum(["missions", "activities", "collectibles", "businesses"])).default([]),
-      savedOnly: z.boolean().default(false),
-      notesOnly: z.boolean().default(false),
-      query: z.string().max(120).default(""),
-    })
-    .default({}),
-  view: z.object({ x: z.number(), y: z.number(), k: z.number() }).default({ x: 500, y: 500, k: 1 }),
+  filter: z.object(FilterShape).default({}),
+  view: z
+    .object({ x: z.number().finite(), y: z.number().finite(), z: z.number().finite() })
+    .default(DEFAULT_VIEW),
   markers: z.array(MapRecord).max(2000).default([]),
   packs: z.array(Pack).max(20).default([]),
-  bookmarks: z.array(z.object({ id: z.string().max(40), name: z.string().max(60), x: z.number(), y: z.number(), k: z.number() })).max(50).default([]),
+  favorites: z.array(z.string().max(80)).max(20000).default([]),
+  profiles: z
+    .array(Profile)
+    .max(8)
+    .default([DEFAULT_PROFILE])
+    .transform((list) => {
+      const seen = new Set<string>();
+      const out = list.filter((p) => !seen.has(p.id) && seen.add(p.id));
+      return out.length ? out : [{ ...DEFAULT_PROFILE, found: [] }];
+    }),
+  activeProfile: z.string().max(40).default("main"),
+  bookmarks: z.array(z.object({ id: z.string().max(40), name: z.string().max(60), x: z.number().finite(), y: z.number().finite(), z: z.number().finite() })).max(50).default([]),
   savedFilters: z
-    .array(
-      z.object({
-        id: z.string().max(40),
-        name: z.string().max(60),
-        categories: z.array(z.enum(["missions", "activities", "collectibles", "businesses"])),
-        savedOnly: z.boolean(),
-        notesOnly: z.boolean(),
-        query: z.string().max(120),
-      }),
-    )
+    .array(z.object({ id: z.string().max(40), name: z.string().max(60), ...FilterShape }))
     .max(30)
     .default([]),
   selectedId: z.string().max(80).default(""),

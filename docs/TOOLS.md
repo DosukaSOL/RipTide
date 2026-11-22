@@ -20,11 +20,18 @@ Everything runs on your machine. Nothing is uploaded, and there are no accounts,
 | **RipTide Studio** | Everything in classic Studio, embedded unchanged under `#/studio/...`. Old links redirect | Hosted deploys, preview servers and deploy history (labelled "Example data") | GTA VI adapter |
 | **ViceLab** | Imports real frame-time captures from PresentMon, OCAT, FrameView, CapFrameX and MangoHud. Calculates average FPS, 1% and 0.1% lows, p99 and stability. Recommends a preset from **your own runs only** (needs at least two). Wipe compare for your own screenshots. History with import/export. Hardware profiles from what the browser reports | The "Start benchmark" timer guides a run. RipTide doesn't record the game itself; you import the capture your capture tool saved | GTA VI as a game choice (disabled), GTA VI presets and settings names |
 | **Heist Ops** | Plans with roles, phases, status, checklists and notes. Two templates. Export/import as a file to share with your crew. Several plans per device | The preview plan you see before creating one | Live crew rooms (see [design/heist-sync.md](design/heist-sync.md)). Any real GTA VI heist, mission or payout data. Plans are templates you fill in |
-| **Interactive Map** | Pan, zoom, keyboard control, search, filters, saved filters, bookmarks, personal markers with notes, map-pack import with review step, pop-out to a second window that keeps filters, markers and view | The map is a **schematic canvas**, not GTA VI geography. Category counts show "—" until verified records exist | Official map tiles and verified location data |
+| **Interactive Map** | Rockstar's official map of Leonida, tiled and bundled. About 900 community-mapped places from gtadb.org in nine categories, with region filter, ranked search, details (type, real-world inspiration, whether you can go inside, position). Found tracking with up to 8 playthroughs, hide found, next unfound, favourites. Your own markers with categories, notes and tags. Saved filters, bookmarks, map packs with a review step. Pops out to a second window and keeps its state | None | None. Collectibles, missions and weapon pickups simply aren't mapped yet, so Collectibles shows "—" until data exists. You can track your own by giving markers the Collectibles category |
 | **Workspaces** | Pop any of ViceLab, Heist Ops or the Map into its own window. Windows dock back, remember position and size, and come back on screen if a monitor is unplugged. Multi-display detection where the browser allows it (Window Management API). Saved workspaces, restore on startup | None | None. The native desktop app is planned (see [design/desktop-shell.md](design/desktop-shell.md)) |
 | **Roadmap** | Honest status for every tool and 12 planned tools, each labelled with what it waits for | None | Most planned tools wait for GTA VI on PC, GTA VI Online, Rockstar's policy, or a verified data source |
 | **Settings** | Motion (system, reduced, full), startup animation, shell toggle, export everything to one file, restore it, reset each store separately | None | None |
 | **Help & feedback** | Keyboard shortcuts, plain-language notes, links to issues and private security reports | None | None |
+
+## Interactive Map data
+
+- **Map:** © Rockstar Games, the official map of Leonida released at launch. Tiles prepared by gtadb.org, bundled at zoom 0–4 (about 13 MB).
+- **Places:** gtadb.org and contributors, CC BY 4.0, filtered and categorised by RipTide. See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for exactly what changed.
+- **Refreshing:** `node scripts/map/import-gtadb.mjs --src <gtadb checkout>` rebuilds tiles and places from a local clone. RipTide never fetches from gtadb.org while running.
+- **Your progress** (found places, favourites, playthroughs, markers) stays on this device. Earlier preview markers made on the old placeholder map aren't moved to Leonida; the app offers to remove them.
 
 ## What RipTide Tools will never do
 
@@ -43,7 +50,7 @@ It doesn't read game memory, inject into game processes, automate gameplay, or t
 | Requirement | Status |
 | --- | --- |
 | Exact logo files, brand tokens and fonts (Adventor, DM Sans, Anonymous Pro) | Done. `brand/mark.svg` and `brand/lockup.png` are copied into the build |
-| No fabricated data, honest empty states, GTA VI dependencies gated | Done. Studio's example panels are labelled |
+| No fabricated data, honest empty states, GTA VI dependencies gated | Done. Studio's example panels are labelled. Map data is credited and marked as community data |
 | Two or more tools mounted at once | Done, covered by the end-to-end test |
 | Map pops out to a second monitor and keeps its filters | Done, covered by the end-to-end test |
 | Windows recover when a monitor is unplugged | Done (`clampToScreens`, unit-tested) |

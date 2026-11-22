@@ -24,7 +24,7 @@ export const MODULE_STATUS = [
   { id: "studio", name: "RipTide Studio", status: "Working today on GTA V (FiveM)", detail: "Design, check and build servers. Hosted deploys are simulated until hosting opens." },
   { id: "vicelab", name: "ViceLab", status: "Working with imported captures", detail: "Analyses frame-time captures from PresentMon, CapFrameX, MangoHud, OCAT and FrameView. GTA VI tests wait for the PC release." },
   { id: "heist", name: "Heist Ops", status: "Working locally", detail: "Plans, roles, phases, checklists and notes on this device, with file sharing. Live crew rooms aren't built yet." },
-  { id: "map", name: "Interactive Map", status: "Engine working, no GTA VI data", detail: "Pan, zoom, filters, search, markers, bookmarks and map-pack import on a schematic canvas." },
+  { id: "map", name: "Interactive Map", status: "Working with the official map", detail: "Rockstar's map of Leonida with community-mapped places, search, filters, found tracking per playthrough, favourites, your own markers and pop-out. Collectibles aren't mapped yet." },
   { id: "workspaces", name: "Workspaces", status: "Working in the browser", detail: "Detach tools into their own windows, place them on another display and restore layouts. The native desktop app is planned." },
 ] as const;
 

@@ -71,7 +71,7 @@ These ideas are new for game servers, and most of them already work in the previ
 
 Studio is getting company. **RipTide Tools** puts Studio and four companion tools in one app: **ViceLab** for frame-time benchmarks and image compare, **Heist Ops** for crew plans, an **Interactive Map** you can pop out to a second monitor, and **Workspaces** to arrange it all across your displays. Open tools stay running while you switch between them.
 
-It's behind a flag while we finish it. Add `?shell=tools` to the Studio address to try it, or `?shell=classic` to go back. Anything that needs GTA VI is clearly marked and switched off until the game is out on PC. There's no made-up map or mission data.
+It's behind a flag while we finish it. Add `?shell=tools` to the Studio address to try it, or `?shell=classic` to go back. The map is Rockstar's official map of Leonida with about 900 community-mapped places to find and tick off. Anything that needs GTA VI on PC is clearly marked and switched off until it's out. There's no made-up data.
 
 <table>
   <tr>
@@ -80,7 +80,7 @@ It's behind a flag while we finish it. Add `?shell=tools` to the Studio address 
   </tr>
   <tr>
     <td><img src="docs/screenshots/tools-heist.png" alt="Heist Ops plan with crew roles and a four-phase timeline"><br><sub><b>Heist Ops.</b> Roles, phases and checklists for your crew.</sub></td>
-    <td><img src="docs/screenshots/tools-map.png" alt="Interactive Map with filters, a schematic canvas and a pop-out button"><br><sub><b>Interactive Map.</b> Markers, filters and a second-screen pop-out.</sub></td>
+    <td><img src="docs/screenshots/tools-map.png" alt="Interactive Map showing the official map of Leonida with place markers, category filters and progress"><br><sub><b>Interactive Map.</b> The official map, places to find and a second-screen pop-out.</sub></td>
   </tr>
 </table>
 
@@ -161,6 +161,8 @@ The longer version is in [docs/ROADMAP.md](docs/ROADMAP.md).
 ## License
 
 Copyright © 2026 Dosuka. All rights reserved. See [LICENSE](LICENSE).
+
+The Interactive Map isn't ours: the map of Leonida is © Rockstar Games, and the place data comes from [gtadb.org](https://map.gtadb.org) and contributors under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Grand Theft Auto, GTA V and GTA VI are trademarks of their respective owners and are mentioned only to describe compatibility.
 
