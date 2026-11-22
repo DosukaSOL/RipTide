@@ -96,16 +96,21 @@ await step("after a restart, the files on disk are what the app shows", async ()
   await win.locator("#rt-plan-notes").waitFor();
   assert.equal(await win.inputValue("#rt-plan-notes"), "Edited on disk");
 });
+await step("saving again keeps the previous version as a backup", async () => {
+  await win.fill("#rt-plan-notes", "Second edit");
+  await win.waitForTimeout(600);
+  assert.match(readFileSync(f, "utf8"), /Second edit/);
+  assert.match(readFileSync(`${f}.bak`, "utf8"), /Edited on disk/);
+});
 await app.close();
 
 // Damage the main file: the backup (the version before the last save) takes over.
-const backupNotes = JSON.parse(readFileSync(`${f}.bak`, "utf8")).plans[0].notes;
 writeFileSync(f, '{"plans": [');
 ({ app, win, errors } = await launch());
 await step("a damaged file falls back to its backup", async () => {
   await go(win, "#/heist");
   await win.locator("#rt-plan-notes").waitFor();
-  assert.equal(await win.inputValue("#rt-plan-notes"), backupNotes);
+  assert.equal(await win.inputValue("#rt-plan-notes"), "Edited on disk");
 });
 assert.deepEqual(errors, []);
 await app.close();
