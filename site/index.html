@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RipTide Tools: every tool for your GTA life, in one app</title>
+  <meta name="description" content="RipTide Tools puts the official map of Leonida, ViceLab benchmarks, Heist Ops crew plans, a no-code server studio and multi-monitor workspaces in one free app. Built for GTA VI on PC." />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; media-src 'self'; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#130f26" />
+  <meta property="og:title" content="RipTide Tools" />
+  <meta property="og:description" content="Every tool for your GTA life. One app. Built for GTA VI on PC." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="assets/trailer-poster.jpg" />
+  <link rel="icon" href="brand/mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <canvas id="tide" aria-hidden="true"></canvas>
+
+  <header class="nav" id="top">
+    <div class="wrap nav-in">
+      <a class="brand" href="#top" aria-label="RipTide home">
+        <img src="brand/mark.svg" alt="" width="40" height="40" />
+        <span class="brand-word">riptide</span><span class="brand-tag">tools</span>
+      </a>
+      <nav class="nav-links" aria-label="Sections">
+        <a href="#tools">Tools</a>
+        <a href="#map">Map</a>
+        <a href="#why">Why RipTide</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-ghost btn-sm" href="https://discord.gg/N88znNpSgC" rel="noopener noreferrer" target="_blank">Discord</a>
+        <a class="btn btn-ghost btn-sm" href="https://github.com/DosukaSOL/RipTide" rel="noopener noreferrer" target="_blank">GitHub</a>
+        <a class="btn btn-primary btn-sm" href="app/?shell=tools">Open the app</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="sun" aria-hidden="true"><i></i><b></b><b></b><b></b><b></b></div>
+      <div class="wrap hero-in">
+        <div class="hero-copy">
+          <p class="chip"><span class="dot"></span>Free preview · built for GTA VI on PC</p>
+          <h1>Every tool for your GTA life. <span class="grad">One app.</span></h1>
+          <p class="lead">The official map of Leonida, real benchmarks, crew plans, a no-code server studio and windows that follow you across monitors. All in RipTide Tools, all on your PC.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary btn-lg" href="app/?shell=tools">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              Open RipTide Tools
+            </a>
+            <a class="btn btn-ghost btn-lg" href="#trailer">Watch the trailer</a>
+          </div>
+          <p class="fine">Runs in your browser. No account, no install, nothing uploaded.</p>
+        </div>
+        <div class="hero-shot">
+          <figure class="frame float">
+            <img src="assets/map-place.webp" alt="RipTide Tools Interactive Map zoomed into Vice Beach, with Y Vice City selected and its place details" width="1600" height="900" />
+          </figure>
+          <div class="pill p1"><b>884</b> places to find</div>
+          <div class="pill p2"><span class="tick" aria-hidden="true"></span>Found</div>
+          <div class="pill p3">Pop out to screen 2</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trailer -->
+    <section class="section" id="trailer">
+      <div class="wrap">
+        <div class="head">
+          <h2>See it in sixty seconds</h2>
+          <p>Everything in the trailer is the real app, as it is today.</p>
+        </div>
+        <figure class="frame video">
+          <video src="assets/trailer.mp4" poster="assets/trailer-poster.jpg" muted loop playsinline preload="none" aria-label="RipTide Tools trailer, without sound"></video>
+          <button class="play" type="button" aria-label="Play the trailer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+          </button>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Tools -->
+    <section class="section" id="tools">
+      <div class="wrap">
+        <div class="head">
+          <h2>Five tools, one window</h2>
+          <p>Open as many as you like. They keep running while you switch, so you never lose your place.</p>
+        </div>
+        <div class="tools">
+          <div class="tool-list" role="tablist" aria-label="RipTide tools" aria-orientation="vertical">
+            <button role="tab" id="t-map" aria-controls="p-map" aria-selected="true" class="tool-tab" data-c="sea">
+              <span class="tt-name">Interactive Map</span><span class="tt-sub">The official map of Leonida</span>
+            </button>
+            <button role="tab" id="t-vicelab" aria-controls="p-vicelab" aria-selected="false" tabindex="-1" class="tool-tab" data-c="pink">
+              <span class="tt-name">ViceLab</span><span class="tt-sub">Know your hardware</span>
+            </button>
+            <button role="tab" id="t-heist" aria-controls="p-heist" aria-selected="false" tabindex="-1" class="tool-tab" data-c="sun">
+              <span class="tt-name">Heist Ops</span><span class="tt-sub">Plan the job with your crew</span>
+            </button>
+            <button role="tab" id="t-studio" aria-controls="p-studio" aria-selected="false" tabindex="-1" class="tool-tab" data-c="sea">
+              <span class="tt-name">RipTide Studio</span><span class="tt-sub">Servers without code</span>
+            </button>
+            <button role="tab" id="t-ws" aria-controls="p-ws" aria-selected="false" tabindex="-1" class="tool-tab" data-c="sun">
+              <span class="tt-name">Workspaces</span><span class="tt-sub">Every monitor, used</span>
+            </button>
+          </div>
+          <div class="tool-panels">
+            <div class="tool-panel" role="tabpanel" id="p-map" aria-labelledby="t-map">
+              <figure class="frame"><img src="assets/map.webp" alt="The Interactive Map showing all of Leonida with place markers, progress and filters" width="1600" height="900" loading="lazy" /></figure>
+              <ul class="ticks">
+                <li>884 places in nine categories, from safehouses to mod shops</li>
+                <li>Track what you've found across up to eight playthroughs</li>
+                <li>Search, region filters, favourites and your own markers</li>
+              </ul>
+            </div>
+            <div class="tool-panel" role="tabpanel" id="p-vicelab" aria-labelledby="t-vicelab" hidden>
+              <figure class="frame"><img src="assets/vicelab-stats.webp" alt="ViceLab showing a frame-time chart with average FPS, 1% low FPS and stability" width="1600" height="900" loading="lazy" /></figure>
+              <ul class="ticks">
+                <li>Real frame times from PresentMon, CapFrameX, MangoHud, OCAT and FrameView</li>
+                <li>Average FPS, 1% and 0.1% lows and frame-time stability</li>
+                <li>Screenshot compare and settings picked from your own runs</li>
+              </ul>
+            </div>
+            <div class="tool-panel" role="tabpanel" id="p-heist" aria-labelledby="t-heist" hidden>
+              <figure class="frame"><img src="assets/heist.webp" alt="Heist Ops with a crew plan, assigned roles and a four-phase timeline" width="1600" height="900" loading="lazy" /></figure>
+              <ul class="ticks">
+                <li>Roles, phases, checklists and shared notes</li>
+                <li>Templates to start fast, or build your own plan</li>
+                <li>Share a plan with your crew as a file. Live crew rooms are next</li>
+              </ul>
+            </div>
+            <div class="tool-panel" role="tabpanel" id="p-studio" aria-labelledby="t-studio" hidden>
+              <figure class="frame"><img src="assets/studio.webp" alt="RipTide Studio overview of the Neon Coast server with launch readiness and checklist" width="1600" height="900" loading="lazy" /></figure>
+              <ul class="ticks">
+                <li>Rules, roles, economy, mods and visuals with no code</li>
+                <li>Economy forecast, mod conflict checks and a plain-English rulebook</li>
+                <li>Builds FiveM servers today. Built to move to GTA VI</li>
+              </ul>
+            </div>
+            <div class="tool-panel" role="tabpanel" id="p-ws" aria-labelledby="t-ws" hidden>
+              <figure class="frame"><img src="assets/workspaces.webp" alt="Workspaces showing layout settings and a display preview" width="1600" height="900" loading="lazy" /></figure>
+              <ul class="ticks">
+                <li>Pop the map, ViceLab or Heist Ops into their own windows</li>
+                <li>Windows remember where they were and come back</li>
+                <li>Unplug a monitor and nothing gets lost off-screen</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Map -->
+    <section class="section" id="map">
+      <div class="wrap split">
+        <div>
+          <p class="chip chip-sea"><span class="dot"></span>Interactive Map</p>
+          <h2>The official map of Leonida, ready to explore</h2>
+          <p class="body">Rockstar's map with every place the community has pinned down so far. Search for a shop, filter by region, tick places off as you find them and keep a separate run for each playthrough.</p>
+          <dl class="stats">
+            <div><dt>Places to find</dt><dd data-count="884">884</dd></div>
+            <div><dt>Categories</dt><dd data-count="9">9</dd></div>
+            <div><dt>Playthroughs</dt><dd data-count="8">8</dd></div>
+          </dl>
+          <a class="btn btn-ghost" href="app/?shell=tools#/map">Open the map</a>
+        </div>
+        <figure class="frame tilt"><img src="assets/map-search.webp" alt="Searching the map for gas stations, with matching results listed" width="1600" height="900" loading="lazy" /></figure>
+      </div>
+    </section>
+
+    <!-- Two screens -->
+    <section class="section">
+      <div class="wrap">
+        <div class="head">
+          <h2>Map on one screen. Everything else on the other.</h2>
+          <p>Pop a tool out and it keeps every filter. Your main window stays free.</p>
+        </div>
+        <div class="screens" id="screens">
+          <div class="mon"><div class="scr"><img src="assets/vicelab-stats.webp" alt="" loading="lazy" /><img class="scr-swap" src="assets/map.webp" alt="" loading="lazy" /></div><span>Main display</span></div>
+          <div class="mon"><div class="scr scr-empty"><img class="scr-phone" src="assets/map-window.webp" alt="" loading="lazy" /></div><span>Second display</span></div>
+          <div class="flyer" aria-hidden="true"><img src="assets/map-window.webp" alt="" loading="lazy" /></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Why -->
+    <section class="section" id="why">
+      <div class="wrap">
+        <div class="head">
+          <h2>Why RipTide</h2>
+          <p>Made by the creator of PushFPS, with the same rule: it has to make your setup better without getting in the way.</p>
+        </div>
+        <div class="cards">
+          <article class="card"><h3>All in one app</h3><p>Five tools in one window and one workspace. No more ten browser tabs.</p></article>
+          <article class="card"><h3>Two screens, one setup</h3><p>Pop any tool out. It remembers where it was, even after a restart.</p></article>
+          <article class="card"><h3>Stays on your PC</h3><p>No account and nothing uploaded. Your captures, plans and progress stay with you.</p></article>
+          <article class="card"><h3>Never touches the game</h3><p>No memory reads, no injection, no bots. ViceLab only reads files your capture tool saved.</p></article>
+          <article class="card"><h3>Honest data</h3><p>Numbers come from your own runs, and map data is credited. Nothing is made up.</p></article>
+          <article class="card"><h3>Ready for GTA VI on PC</h3><p>Built to support it the day Rockstar's PC tools land, and updated as we learn more.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Status -->
+    <section class="section">
+      <div class="wrap">
+        <div class="head">
+          <h2>Where things stand</h2>
+          <p>It's a preview, so here's exactly what works, what's next and what's waiting on Rockstar.</p>
+        </div>
+        <div class="status">
+          <div class="st st-ok"><h3>Works today</h3><ul><li>Interactive Map with the official map</li><li>ViceLab with imported captures</li><li>Heist Ops plans on your device</li><li>Studio builds for FiveM</li><li>Pop-out windows and workspaces</li></ul></div>
+          <div class="st st-demo"><h3>Coming next</h3><ul><li>Live crew rooms for Heist Ops</li><li>One-click server hosting</li><li>A desktop app</li><li>Collectibles once they're mapped</li></ul></div>
+          <div class="st st-wait"><h3>Waiting for GTA VI on PC</h3><ul><li>GTA VI benchmarks and presets</li><li>GTA VI server support</li><li>Anything that needs GTA VI Online</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section" id="faq">
+      <div class="wrap faq">
+        <div class="head"><h2>Questions</h2></div>
+        <details class="qa"><summary>Is it free?</summary><p>Yes. The preview is free to use, in your browser or on your own machine.</p></details>
+        <details class="qa"><summary>Do I need to install anything?</summary><p>No. Open the app and it runs in your browser. If you'd rather run it locally, clone the repo and run <code>npm install</code>, <code>npm run build</code> and <code>npm run dev</code>.</p></details>
+        <details class="qa"><summary>Does it work with GTA VI?</summary><p>The map does: it's the official map of Leonida. Everything that needs the game itself, like benchmarks and servers, waits for GTA VI on PC. Rockstar hasn't announced a PC date yet.</p></details>
+        <details class="qa"><summary>Is it safe to use with my game?</summary><p>RipTide never reads game memory, never injects anything and never automates gameplay. ViceLab only reads capture files your own tools saved.</p></details>
+        <details class="qa"><summary>Where do my progress and plans go?</summary><p>Nowhere. They're saved in your browser on your device. You can export a backup in Settings.</p></details>
+        <details class="qa"><summary>Where does the map data come from?</summary><p>The map of Leonida is © Rockstar Games. Places come from the gtadb.org community under CC BY 4.0, filtered and sorted by RipTide.</p></details>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section cta-band">
+      <div class="wrap">
+        <h2>Get the first look</h2>
+        <p>It's early, it's free, and your feedback decides what comes next.</p>
+        <div class="cta-row center">
+          <a class="btn btn-primary btn-lg" href="app/?shell=tools">Open RipTide Tools</a>
+          <a class="btn btn-ghost btn-lg" href="https://discord.gg/N88znNpSgC" rel="noopener noreferrer" target="_blank">Join the Discord</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-in">
+      <a class="brand" href="#top"><img src="brand/mark.svg" alt="" width="32" height="32" /><span class="brand-word">riptide</span></a>
+      <nav aria-label="Footer">
+        <a href="https://github.com/DosukaSOL/RipTide" rel="noopener noreferrer" target="_blank">Source</a>
+        <a href="https://github.com/DosukaSOL/RipTide/issues/new" rel="noopener noreferrer" target="_blank">Report a problem</a>
+        <a href="https://github.com/DosukaSOL/RipTide/security" rel="noopener noreferrer" target="_blank">Security</a>
+        <a href="https://discord.gg/N88znNpSgC" rel="noopener noreferrer" target="_blank">Discord</a>
+      </nav>
+      <p class="credits">Made by <a href="https://github.com/DosukaSOL" rel="noopener noreferrer" target="_blank">DosukaSOL</a>, creator of PushFPS. Independent project, not affiliated with Rockstar Games or Take-Two Interactive. Map of Leonida © Rockstar Games; places from <a href="https://map.gtadb.org" rel="noopener noreferrer" target="_blank">gtadb.org</a> (CC BY 4.0). This site sets no cookies and loads nothing from other servers.</p>
+    </div>
+  </footer>
+  <script src="main.js" defer></script>
+</body>
+</html>

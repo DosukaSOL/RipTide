@@ -17,6 +17,14 @@
   <img alt="License: all rights reserved" src="https://img.shields.io/badge/license-all%20rights%20reserved-A69DC9?style=flat-square&labelColor=130F26">
 </p>
 
+<p align="center">
+  <a href="https://dosukasol.github.io/RipTide/"><b>Website</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://dosukasol.github.io/RipTide/app/?shell=tools"><b>Open RipTide Tools in your browser</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://discord.gg/N88znNpSgC">Discord</a>
+</p>
+
 ---
 
 > [!IMPORTANT]
@@ -114,7 +122,9 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Try the preview
 
-You'll need Node 20 or newer.
+The quickest way: **[open RipTide Tools in your browser](https://dosukasol.github.io/RipTide/app/?shell=tools)**. Nothing to install, and everything stays on your device.
+
+To run it yourself, you'll need Node 20 or newer.
 
 ```bash
 npm install
@@ -124,6 +134,9 @@ npm run e2e   # browser tests, needs Playwright
 
 # Open the Studio at http://127.0.0.1:5173
 npm run dev
+
+# Or build the website and the app together at http://127.0.0.1:4173
+npm run site
 
 # Or use the CLI
 npm run riptide -- check examples/neon-coast.riptide.json

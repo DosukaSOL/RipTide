@@ -4,6 +4,10 @@ RipTide Tools is the new home for everything RipTide makes: Studio plus four com
 
 ## Try it
 
+**In your browser:** https://dosukasol.github.io/RipTide/app/?shell=tools
+
+**Locally:**
+
 ```bash
 npm run build && npm run dev
 ```
