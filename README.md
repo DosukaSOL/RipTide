@@ -19,7 +19,9 @@
 </p>
 
 <p align="center">
-  <a href="https://dosukasol.github.io/RipTide/app/?shell=tools"><b>Open RipTide Tools in your browser</b></a>
+  <a href="https://dosukasol.github.io/RipTide/app/?shell=tools"><b>Open in your browser</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://dosukasol.github.io/RipTide/#download"><b>Download for Windows, macOS and Linux</b></a>
   &nbsp;·&nbsp;
   <a href="https://dosukasol.github.io/RipTide/"><b>Website</b></a>
   &nbsp;·&nbsp;
@@ -120,7 +122,8 @@ Frameworks, inventories, voice, phones, HUDs, housing, garages, jobs, police and
 
 ## Try it
 
-The quickest way: **[open RipTide Tools in your browser](https://dosukasol.github.io/RipTide/app/?shell=tools)**. Nothing to install, and everything stays on your device.
+- **In your browser:** [open RipTide Tools](https://dosukasol.github.io/RipTide/app/?shell=tools). Nothing to install, and everything stays on your device.
+- **Desktop app:** [download it](https://github.com/DosukaSOL/RipTide/releases/latest) for Windows, macOS or Linux. Your data is saved as files in `Documents/RipTide`, it works offline, and it never gets cleared with your browser data. The builds aren't code-signed yet, so the first launch shows a warning: on Windows click **More info → Run anyway**, on macOS right-click the app and choose **Open**.
 
 To run it yourself, you'll need Node 20 or newer.
 
@@ -166,6 +169,7 @@ flowchart LR
 - **`packages/tools`**: logic for the other tools: frame-time parsing and stats, heist plans, map places and packs, window layout recovery, validated storage. Fully tested.
 - **`packages/cli`**: `riptide` on the command line, for people who like files and git.
 - **`apps/studio`**: the app itself, with RipTide Tools and Studio.
+- **`desktop`**: the desktop app for Windows, macOS and Linux, saving data as files. See [docs/design/desktop-shell.md](docs/design/desktop-shell.md).
 - **`site`**: the website, published to GitHub Pages with the app at `/app/`.
 
 More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -180,10 +184,11 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - [x] RipTide Tools preview: ViceLab, Heist Ops, Interactive Map, Workspaces
 - [x] Official map of Leonida with places, found tracking and playthroughs
 - [x] Website with the app in your browser
+- [x] Desktop app for Windows, macOS and Linux, saving to files
 - [ ] Live crew rooms for Heist Ops
 - [ ] Discord bot: role sync, applications, rules post
 - [ ] RipTide hosting with preview servers and rollbacks
-- [ ] Desktop app
+- [ ] Signed installers and auto-updates
 - [ ] **GTA VI on PC: benchmarks, presets and the server adapter, the moment Rockstar's PC tools exist**
 
 The longer version is in [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -195,6 +200,8 @@ The longer version is in [docs/ROADMAP.md](docs/ROADMAP.md).
 **Is this made by Rockstar?** No. RipTide is an independent project and isn't affiliated with Rockstar Games, Take-Two or Cfx.re.
 
 **Does it work with GTA VI right now?** The Interactive Map does: it uses the official map of Leonida. Everything that needs the game on PC, like benchmarks and servers, waits for GTA VI on PC, which Rockstar hasn't announced yet.
+
+**Where is my data saved?** In the desktop app, as files in `Documents/RipTide`, with a backup of each. In the browser, in that browser's storage on your device. Nothing is ever uploaded, and you can export a backup in Settings.
 
 **Is it safe to use with my game?** RipTide never reads game memory, injects anything or automates gameplay. ViceLab only reads capture files your own tools saved.
 

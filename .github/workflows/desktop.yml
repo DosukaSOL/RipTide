@@ -35,6 +35,11 @@ jobs:
         run: npm run dist
         working-directory: desktop
 
+      # Launch the real Linux app and check saving, restarts, backups and pop-outs.
+      - name: Test the packaged app (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" node desktop/test/app.e2e.mjs desktop/release/linux-unpacked/riptide-tools
+
       # No Apple developer certificate yet: build the app, sign it ad hoc so it
       # runs on Apple silicon, then package the signed app into a DMG.
       - name: Build (macOS)

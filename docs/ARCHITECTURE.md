@@ -67,6 +67,10 @@ The app opens RipTide Tools with `?shell=tools` (remembered per device) and clas
 - **Map data** (`apps/studio/assets/map/leonida`): official map tiles and community places, bundled and loaded from the app's own origin. `scripts/map/import-gtadb.mjs` rebuilds them from a local gtadb.org checkout. See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
 - Every stored value is validated when it's read, so corrupt or tampered storage falls back to safe defaults. The last change is saved even if the page closes straight away.
 
+## Desktop app (`desktop`)
+
+Electron around the same built app, served from `app://riptide/` with every window sandboxed and the network blocked. Data is saved as JSON files in `Documents/RipTide` with atomic writes and a backup of each file; `apps/studio/src/desktop.ts` loads the files before anything reads storage and writes every change back. Details in [design/desktop-shell.md](design/desktop-shell.md).
+
 ## Website (`site`)
 
 A static page with no dependencies. `scripts/build-site.mjs` puts it together with the built app at `/app/`, and `.github/workflows/pages.yml` runs the tests, builds both and publishes them to GitHub Pages on every push to `main`.
@@ -74,4 +78,5 @@ A static page with no dependencies. `scripts/build-site.mjs` puts it together wi
 ## Tests
 
 - `npm test`: unit tests for `packages/core` and `packages/tools`.
+- `desktop/test/app.e2e.mjs`: launches the packaged desktop app and checks saving, restarts, backups, pop-outs and isolation.
 - `npm run e2e`: browser tests for every tool, pop-out windows, keep-alive, corrupt storage, the map, and six screen sizes from 1366×768 to 1080p at 200%.

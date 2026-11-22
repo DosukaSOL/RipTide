@@ -1,40 +1,37 @@
-# Desktop shell (planned, not built)
+# Desktop app
 
-RipTide Tools runs in the browser today. Pop-out windows, multi-display placement and restore all work there, within what browsers allow. A native desktop app would remove those limits. This note records the plan so the web build doesn't paint us into a corner.
+RipTide Tools ships as a desktop app for Windows, macOS and Linux, built from the same code as the browser version. It lives in [`desktop/`](../../desktop).
 
 ## Why a desktop app
 
-- Place windows on any display without asking for the browser's display permission.
-- Restore windows exactly, including which display they were on, after a restart.
-- Read capture files from a folder the person picks (for example, PresentMon's output folder) instead of importing them one at a time.
-- Run without a browser tab.
+- **Data never gets cleared.** Everything is saved as files on your computer instead of in browser storage.
+- **Works offline,** with no account.
+- **Pop-out windows** are real app windows that can sit on any monitor.
 
-## Options
+## How it's built
 
-| | Tauri | Electron |
-| --- | --- | --- |
-| Size | Small, uses the system web view | Large, ships Chromium |
-| Rendering | Differs slightly between Windows (WebView2), macOS and Linux | The same everywhere |
-| Native code | Rust | Node |
-| Window management | Good | Very good |
+- **Electron** wraps the built app. It's larger than a Tauri app, but it renders the same everywhere and builds for all three systems in GitHub Actions with no extra toolchain.
+- The app is served from `app://riptide/`, never from the network. Every request that isn't the app itself is blocked.
+- Every window is sandboxed, with context isolation on and no Node access. External links open in the system browser, and navigating away from the app is blocked.
+- The only bridge to the computer (`desktop/preload.cjs`) reads and writes RipTide's own data files. Keys must match `riptide.*`, values must be valid JSON, and calls are only accepted from the app's own pages.
 
-The lean is **Tauri**. The target audience is PC gamers who care about disk space and background memory, and GTA VI on PC means Windows, where WebView2 is already installed.
+## Where data lives
 
-## Boundary between the app and the native side
+- `Documents/RipTide`, one readable JSON file per tool, for example `riptide.heist.v1.json`. If Documents isn't writable, the app's own data folder is used instead. **File → Open data folder** shows it, and so does Settings.
+- Writes are atomic (temp file, then rename), and the previous version is kept as `<file>.json.bak`. A damaged file falls back to its backup automatically.
+- On start, the files are loaded before anything reads storage. Data from earlier versions that only lived in the app's browser storage is copied to files the first time.
 
-The React app stays as it is. A small native layer offers a fixed, typed list of commands and nothing else:
+## Builds and releases
 
-- `windows.open(tool, geometry)`, `windows.list()`, `windows.focus(tool)`, `windows.close(tool)`
-- `displays.list()` returns position, size and scale only
-- `captures.watch(folder)` streams new capture files from a folder the person picked through a native dialog
+- `.github/workflows/desktop.yml` builds a Windows installer, a universal macOS DMG, a Linux AppImage and a `.deb`. Pushing a tag like `v0.1.0` publishes them as a GitHub Release.
+- The Linux build is launched and tested automatically (`desktop/test/app.e2e.mjs`): saving, restarts, backups, pop-outs, link handling, and no network or Node access.
+- The builds aren't code-signed yet. macOS builds are signed ad hoc so they run on Apple silicon. Proper signing and auto-updates come later.
 
-Rules:
+## Building it yourself
 
-- No general file-system, shell or network access is exposed to the web layer.
-- Every command validates its input with the same zod schemas used in `packages/tools`.
-- The app works the same with or without the native layer. `windows.ts` checks for it and falls back to the browser code that exists today.
-- Still no game memory reads, no injection and no automation. Watching a folder of files your capture tool wrote is the limit.
-
-## When
-
-After the web shell is accepted and replaces classic Studio. Nothing here blocks GTA VI support.
+```bash
+npm install && npm run build
+cd desktop && npm install
+npm start        # run it
+npm run dist     # build installers for your system into desktop/release
+```
