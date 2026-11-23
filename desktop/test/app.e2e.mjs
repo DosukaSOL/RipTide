@@ -10,7 +10,7 @@ const exe = process.argv[2];
 if (!exe || !existsSync(exe)) throw new Error("Pass the path to the unpacked app executable.");
 const dataDir = mkdtempSync(join(tmpdir(), "riptide-data-"));
 const profile = mkdtempSync(join(tmpdir(), "riptide-profile-"));
-const env = { ...process.env, RIPTIDE_DATA_DIR: dataDir, RIPTIDE_USER_DATA: profile };
+const env = { ...process.env, RIPTIDE_DATA_DIR: dataDir, RIPTIDE_USER_DATA: profile, RIPTIDE_UPDATES: "off" }; // tests never ask GitHub for updates
 const args = process.platform === "linux" ? ["--no-sandbox"] : []; // containers have no setuid sandbox helper
 let passed = 0;
 const step = async (name, fn) => {

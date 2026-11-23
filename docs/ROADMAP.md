@@ -28,7 +28,7 @@ Riptide is being built ahead of GTA VI on PC. Dates depend on Rockstar, so this 
 - Live tick time, player counts and economy after launch
 - Backups with point-in-time restore
 - Heist Ops crew rooms ([design](design/heist-sync.md))
-- Signed desktop installers and auto-updates
+- Signed desktop installers (one-click updates are done)
 
 ## Phase 3: GTA VI
 

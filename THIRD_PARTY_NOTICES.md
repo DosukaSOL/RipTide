@@ -28,3 +28,7 @@ Files: `apps/studio/public/fonts/`
 
 - DM Sans and Anonymous Pro: SIL Open Font License 1.1
 - TeX Gyre Adventor: GUST Font License
+
+## Desktop app
+
+The desktop app is built with [Electron](https://www.electronjs.org/) (MIT License) and packaged with [electron-builder](https://github.com/electron-userland/electron-builder) (MIT License). One-click updates use [electron-updater](https://github.com/electron-userland/electron-builder/tree/master/packages/electron-updater) (MIT License), bundled into the app together with the packages it depends on, which are under the MIT, ISC and Blue Oak Model 1.0.0 licenses. The full list and every license text ship with the app in `vendor/electron-updater.LICENSES.txt`.

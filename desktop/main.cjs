@@ -6,6 +6,8 @@ const { app, BrowserWindow, Menu, ipcMain, protocol, session, shell, screen } = 
 const fs = require("node:fs");
 const path = require("node:path");
 const storage = require("./storage.cjs");
+const updates = require("./updates.cjs");
+const updater = require("./updater.cjs");
 
 const ORIGIN = "app://riptide";
 const APP_DIR = path.join(__dirname, "app");
@@ -18,7 +20,14 @@ protocol.registerSchemesAsPrivileged([{ scheme: "app", privileges: { standard: t
 
 // Automated tests run with their own profile so earlier runs can't leak in.
 if (process.env.RIPTIDE_USER_DATA) app.setPath("userData", process.env.RIPTIDE_USER_DATA);
+// Right after an update, the new copy waits for the old one to finish quitting first,
+// so it doesn't hand itself over to the copy that's on its way out.
+const updatedFrom = Number(process.env.RIPTIDE_UPDATED_FROM);
+delete process.env.RIPTIDE_UPDATED_FROM;
+if (updatedFrom) updates.waitForExit(updatedFrom, 10000);
 if (!app.requestSingleInstanceLock()) app.quit();
+let quitting = false;
+app.on("before-quit", () => (quitting = true));
 
 /* ---------- where data lives ---------- */
 let dataDir = "";
@@ -158,6 +167,7 @@ app.on("web-contents-created", (_e, wc) => {
 });
 
 app.on("second-instance", () => {
+  if (quitting) return;
   if (!main) return createMain();
   if (main.isMinimized()) main.restore();
   main.focus();
@@ -189,8 +199,10 @@ app.whenReady().then(() => {
     cb({ cancel: !ok });
   });
 
+  const appUpdates = updater.setup({ isApp });
   buildMenu();
   createMain();
+  appUpdates.start();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createMain();
   });

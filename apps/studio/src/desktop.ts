@@ -10,6 +10,37 @@
  * when space runs low.
  */
 
+export type UpdateStatus = "off" | "unsupported" | "idle" | "checking" | "uptodate" | "available" | "downloading" | "installing" | "error" | "failed";
+
+/** What the desktop app tells the page about updates. Set by desktop/updater.cjs. */
+export interface UpdateState {
+  status: UpdateStatus;
+  /** The version running now. */
+  current: string;
+  /** The newer version, once one is found. */
+  version: string | null;
+  percent: number | null;
+  error: string | null;
+  /** auto: installs itself. mac: swaps itself in. manual: the button opens the download page. */
+  mode: "auto" | "mac" | "manual";
+  /** Check when the app opens and every few hours. */
+  auto: boolean;
+  /** The popup was closed for this version until the next launch. */
+  dismissed: boolean;
+  checkedAt: number | null;
+}
+
+export interface UpdatesBridge {
+  get(): UpdateState | null;
+  check(): void;
+  /** Download, install and restart (or open the download page in manual mode). */
+  install(): void;
+  later(): void;
+  openNotes(): void;
+  setAuto(on: boolean): void;
+  onChange(cb: (s: UpdateState) => void): () => void;
+}
+
 export interface DesktopBridge {
   /** Every saved key and its raw value, read from the data folder. */
   readAll(): Record<string, string>;
@@ -19,6 +50,8 @@ export interface DesktopBridge {
   dataDir(): string;
   openDataDir(): void;
   version(): string;
+  /** Missing in desktop builds from before updates existed. */
+  updates?: UpdatesBridge;
 }
 
 const OURS = /^riptide\.[a-z0-9.-]{1,60}$/;

@@ -6,6 +6,7 @@ import { Shell, useToasts } from "./ui";
 import { ToolsDataProvider, useToolsData } from "./data";
 import { closeAllDetached, useDetachedRuntime, useOpenWindows, DETACHABLE, type OpenWindow } from "./windows";
 import "./tools.css";
+import { UpdatePill, UpdatePrompt } from "./Updates";
 
 const STUDIO_SECTIONS = ["overview", "world", "economy", "rules", "roles", "mods", "access", "deploy"];
 
@@ -139,6 +140,7 @@ function Main() {
               <b>riptide</b> tools <span className="rt-top-ver">preview</span>
             </a>
             <div className="rt-top-spacer" />
+            <UpdatePill />
             <span className="rt-top-note">Independent companion app</span>
           </header>
 
@@ -216,6 +218,7 @@ function Main() {
             })}
           </main>
           {toasts}
+          <UpdatePrompt />
         </div>
       </OpenWindows.Provider>
     </Shell.Provider>

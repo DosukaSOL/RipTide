@@ -18,16 +18,20 @@
   },
   "devDependencies": {
     "electron": "45.4.1",
-    "electron-builder": "26.18.0"
+    "electron-builder": "26.18.0",
+    "electron-updater": "6.8.11"
   },
   "build": {
     "appId": "io.github.dosukasol.riptide",
     "productName": "RipTide Tools",
-    "copyright": "Copyright \u00a9 2026 Dosuka",
+    "copyright": "Copyright © 2026 Dosuka",
     "files": [
       "main.cjs",
       "preload.cjs",
       "storage.cjs",
+      "updates.cjs",
+      "updater.cjs",
+      "vendor/**/*",
       "app/**/*",
       "icon.png",
       "package.json",
@@ -62,6 +66,12 @@
           "arch": [
             "universal"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
         }
       ],
       "artifactName": "RipTide-macOS.${ext}",
@@ -90,7 +100,15 @@
       "synopsis": "Every tool for your GTA life, in one app",
       "maintainer": "Dosuka <261566757+DosukaSOL@users.noreply.github.com>",
       "syncDesktopName": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "DosukaSOL",
+        "repo": "RipTide",
+        "releaseType": "release"
+      }
+    ]
   },
   "desktopName": "riptide-tools.desktop"
 }

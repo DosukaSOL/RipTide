@@ -123,7 +123,7 @@ Frameworks, inventories, voice, phones, HUDs, housing, garages, jobs, police and
 ## Try it
 
 - **In your browser:** [open RipTide Tools](https://dosukasol.github.io/RipTide/app/?shell=tools). Nothing to install, and everything stays on your device.
-- **Desktop app:** [download it](https://github.com/DosukaSOL/RipTide/releases/latest) for Windows, macOS or Linux. Your data is saved as files in `Documents/RipTide`, it works offline, and it never gets cleared with your browser data. The builds aren't code-signed yet, so the first launch shows a warning: on Windows click **More info → Run anyway**, on macOS right-click the app and choose **Open**.
+- **Desktop app:** [download it](https://github.com/DosukaSOL/RipTide/releases/latest) for Windows, macOS or Linux. Your data is saved as files in `Documents/RipTide`, it works offline, it never gets cleared with your browser data, and it updates itself with one click when a new version is out. The builds aren't code-signed yet, so the first launch shows a warning: on Windows click **More info → Run anyway**, on macOS right-click the app and choose **Open**.
 
 To run it yourself, you'll need Node 20 or newer.
 
@@ -188,7 +188,8 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - [ ] Live crew rooms for Heist Ops
 - [ ] Discord bot: role sync, applications, rules post
 - [ ] RipTide hosting with preview servers and rollbacks
-- [ ] Signed installers and auto-updates
+- [x] One-click desktop updates
+- [ ] Signed installers
 - [ ] **GTA VI on PC: benchmarks, presets and the server adapter, the moment Rockstar's PC tools exist**
 
 The longer version is in [docs/ROADMAP.md](docs/ROADMAP.md).

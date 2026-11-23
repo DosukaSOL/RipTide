@@ -441,3 +441,46 @@
 .rt-saveloc span { font-size: 13px; color: var(--rt-muted); }
 .rt-saveloc-path { font-family: var(--rt-code); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rt-saveloc .rt-btn { flex: none; }
+
+/* ---------- app updates (desktop) ---------- */
+.rt-upd-scrim {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px;
+  background: rgba(10, 7, 22, .62); backdrop-filter: blur(3px);
+  animation: rt-upd-fade 180ms var(--rt-ease) both;
+}
+.rt-upd {
+  position: relative; width: min(480px, 100%); padding: 30px 30px 26px; overflow: hidden;
+  border: 1px solid var(--rt-line-2); border-radius: 18px; background: linear-gradient(180deg, #1f1840, var(--rt-panel) 62%);
+  box-shadow: 0 30px 80px rgba(4, 2, 14, .6); text-align: left;
+  animation: rt-upd-rise 260ms var(--rt-ease) both;
+}
+.rt-upd::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--rt-horizon); }
+.rt-upd-mark { display: block; width: 52px; height: 52px; margin-bottom: 18px; }
+.rt-upd[data-status="installing"] .rt-upd-mark { animation: rt-upd-bob 1.4s ease-in-out infinite; }
+.rt-upd h2 { margin: 0 0 8px; font: 700 22px/1.25 var(--rt-display); color: var(--rt-sand); }
+.rt-upd p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--rt-sub); }
+.rt-upd-bar { height: 8px; margin-top: 22px; border-radius: 99px; background: var(--rt-line); overflow: hidden; }
+.rt-upd-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--rt-sun), var(--rt-pink)); transition: width 240ms var(--rt-ease); }
+.rt-upd .rt-upd-pct { margin-top: 8px; font: 600 13px/1 var(--rt-code); color: var(--rt-muted); }
+.rt-upd-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 24px; }
+.rt-upd-link {
+  display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 6px 2px;
+  border: 0; background: none; color: var(--rt-muted); font: 600 14px var(--rt-body); cursor: pointer;
+}
+.rt-upd-link:hover { color: var(--rt-sea); }
+.rt-upd-link svg { width: 14px; height: 14px; }
+.rt-upd-pill {
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; margin-right: 14px; padding: 0 12px;
+  border: 1px solid rgba(61, 242, 208, .4); border-radius: 99px; background: rgba(61, 242, 208, .08);
+  color: var(--rt-sea); font: 700 13px var(--rt-body); cursor: pointer;
+  transition: background 140ms var(--rt-ease), border-color 140ms var(--rt-ease);
+}
+.rt-upd-pill:hover { background: rgba(61, 242, 208, .16); border-color: var(--rt-sea); }
+.rt-upd-pill svg { width: 15px; height: 15px; }
+.rt-btn:disabled { opacity: .5; cursor: default; transform: none; }
+@keyframes rt-upd-fade { from { opacity: 0; } }
+@keyframes rt-upd-rise { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+@keyframes rt-upd-bob { 50% { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .rt-upd-scrim, .rt-upd, .rt-upd[data-status="installing"] .rt-upd-mark { animation: none; }
+}

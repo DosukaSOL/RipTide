@@ -16,7 +16,7 @@ npm run build && npm run dev
 
 Then open `http://127.0.0.1:5173/?shell=tools`. The choice is remembered on this device. Go back with `?shell=classic`, or turn it off under Settings → RipTide Tools shell.
 
-Everything runs on your machine. Nothing is uploaded, and there are no accounts, analytics or network calls.
+Everything runs on your machine. Nothing is uploaded, and there are no accounts or analytics. The only network call is the desktop app asking GitHub whether a new version is out, which you can switch off in Settings.
 
 ## What's built, what's a demonstration, and what waits for GTA VI
 

@@ -6,6 +6,7 @@ import { PageHeader, SettingRow, Switch, useShell } from "../ui";
 import { HeaderRight } from "./common";
 import { readFlags, useToolsData, writeFlags } from "../data";
 import { downloadText, readFileText } from "../persist";
+import { UpdatesPanel } from "../Updates";
 
 /** Everything RipTide keeps on this device, by owner. */
 const DATA_KEYS: { key: string; label: string }[] = [
@@ -68,7 +69,14 @@ export function SettingsPage() {
 
   return (
     <div className="rt-page">
-      <PageHeader crumb="Settings" title="Settings" sub="RipTide keeps everything on this device. Nothing is sent anywhere." right={<HeaderRight />} />
+      <PageHeader
+        crumb="Settings"
+        title="Settings"
+        sub={desktopBridge()?.updates
+          ? "RipTide keeps everything on this computer. The only thing it sends out is a check with GitHub for new versions, which you can switch off below."
+          : "RipTide keeps everything on this device. Nothing is sent anywhere."}
+        right={<HeaderRight />}
+      />
       <div className="rt-two">
         <section className="rt-panel rt-pad" aria-labelledby="rt-st-ui">
           <h2 id="rt-st-ui" style={{ marginBottom: 8 }}>Interface</h2>
@@ -116,6 +124,7 @@ export function SettingsPage() {
           ))}
           <p className="rt-hint">Export before resetting. Resets can't be undone.</p>
         </section>
+        <UpdatesPanel />
       </div>
     </div>
   );

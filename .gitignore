@@ -17,4 +17,5 @@ coverage/
 .site/
 desktop/app/
 desktop/release/
+desktop/vendor/
 desktop/node_modules/

@@ -69,7 +69,7 @@ The app opens RipTide Tools with `?shell=tools` (remembered per device) and clas
 
 ## Desktop app (`desktop`)
 
-Electron around the same built app, served from `app://riptide/` with every window sandboxed and the network blocked. Data is saved as JSON files in `Documents/RipTide` with atomic writes and a backup of each file; `apps/studio/src/desktop.ts` loads the files before anything reads storage and writes every change back. Details in [design/desktop-shell.md](design/desktop-shell.md).
+Electron around the same built app, served from `app://riptide/` with every window sandboxed and the network blocked. One-click updates come from GitHub Releases through a separate network session that can only reach GitHub. Data is saved as JSON files in `Documents/RipTide` with atomic writes and a backup of each file; `apps/studio/src/desktop.ts` loads the files before anything reads storage and writes every change back. Details in [design/desktop-shell.md](design/desktop-shell.md).
 
 ## Website (`site`)
 

@@ -2,6 +2,10 @@ name: Desktop app
 
 # Builds RipTide Tools for Windows, macOS and Linux and publishes a GitHub Release.
 # Either push a tag like v0.1.0, or run it from the Actions tab and type the version.
+#
+# Every release also carries latest.yml, latest-mac.yml and latest-linux.yml. Installed apps
+# read these to find the new version and check the download's sha512 before installing it,
+# so the version you type becomes the app's version, and must be higher than the last one.
 on:
   push:
     tags: ["v*"]
@@ -14,6 +18,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.version }}
 
 jobs:
   build:
@@ -35,6 +42,15 @@ jobs:
       - run: npm install --no-audit --no-fund
         working-directory: desktop
 
+      # The app's version comes from the release version, so the update files match it.
+      - name: Set the app version
+        if: env.VERSION != ''
+        shell: bash
+        working-directory: desktop
+        run: |
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then echo "Version must look like v0.1.0"; exit 1; fi
+          npm pkg set version="${VERSION#v}"
+
       - name: Build (Windows, Linux)
         if: runner.os != 'macOS'
         run: npm run dist
@@ -54,7 +70,7 @@ jobs:
           npm run copy-app
           npx electron-builder --mac --universal --dir --publish never
           codesign --force --deep --sign - "release/mac-universal/RipTide Tools.app"
-          npx electron-builder --mac dmg --universal --prepackaged "release/mac-universal/RipTide Tools.app" --publish never
+          npx electron-builder --mac dmg zip --universal --prepackaged "release/mac-universal/RipTide Tools.app" --publish never
 
       - uses: actions/upload-artifact@v4
         with:
@@ -65,6 +81,9 @@ jobs:
             desktop/release/RipTide-*.dmg
             desktop/release/RipTide-*.AppImage
             desktop/release/RipTide-*.deb
+            desktop/release/RipTide-*.zip
+            desktop/release/*.blockmap
+            desktop/release/latest*.yml
 
   release:
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
@@ -80,10 +99,15 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          TAG: ${{ env.VERSION }}
         run: |
           if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then echo "Version must look like v0.1.0"; exit 1; fi
           ls -la dist
+          # Installed apps update from these files: all three must exist and name this version.
+          for f in latest.yml latest-mac.yml latest-linux.yml; do
+            test -f "dist/$f" || { echo "dist/$f is missing"; exit 1; }
+            grep -qx "version: ${TAG#v}" "dist/$f" || { echo "dist/$f doesn't say version ${TAG#v}"; exit 1; }
+          done
           cat > notes.md <<'NOTES'
           RipTide Tools for your desktop. Everything is saved as files in a RipTide folder on your computer, works offline, and needs no account.
 
@@ -99,5 +123,7 @@ jobs:
           - **Linux AppImage:** make it executable (`chmod +x RipTide-Linux.AppImage`), then run it.
 
           Your data is saved in `Documents/RipTide`. Use **File → Open data folder** to find it.
+
+          **Updates:** once installed, RipTide Tools tells you when a new version is out. Click **Update now** and it closes, installs the update and opens again. (On macOS, keep the app in your Applications folder for this. The other files here are what the app downloads to update itself.)
           NOTES
           gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "RipTide Tools $TAG" --notes-file notes.md
