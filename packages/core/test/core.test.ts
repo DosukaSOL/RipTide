@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { CATALOG_BY_ID } from "../src/catalog";
 import { fileURLToPath } from "node:url";
 import {
   validateBlueprint,
@@ -12,6 +13,11 @@ import {
   compileRulebook,
   renderRulesMarkdown,
   renderDiscordEmbed,
+  renderDiscordMessages,
+  to24h,
+  roleCycles,
+  resolveLoadOrder,
+  FIVEM_CAPABILITIES,
   assessReadiness,
   estimateHosting,
   bestRegion,
@@ -262,4 +268,119 @@ test("docker stack never contains real secrets", () => {
   assert.ok(!/cfxk_[A-Za-z0-9]/.test(all));
   assert.match(all, /127\.0\.0\.1:40120:40120/, "admin panel is not exposed publicly");
   assert.match(all, /DB_PASSWORD=\n/, "no default database password");
+});
+
+/* ---------- audit fixes: honest output and stricter validation ---------- */
+
+test("fivem build: every file the server is told to load exists, and no runtime is claimed", () => {
+  const out = fivemAdapter.build(load());
+  const paths = new Set(out.files.map((f) => f.path));
+  const cfg = out.files.find((f) => f.path === "server.cfg")!.contents;
+  // Nothing references a resource or script that isn't in the build or the catalog.
+  assert.ok(!/ensure riptide-runtime/.test(cfg));
+  for (const f of out.files.filter((x) => x.path.endsWith("fxmanifest.lua"))) {
+    const dir = f.path.replace(/fxmanifest\.lua$/, "");
+    for (const m of f.contents.matchAll(/(?:server_script|client_script|shared_script)s?\s+'([^']+)'/g)) {
+      assert.ok(paths.has(dir + m[1]), `${f.path} loads ${m[1]}, which isn't in the build`);
+    }
+  }
+  for (const m of cfg.matchAll(/^ensure (\S+)/gm)) assert.ok(CATALOG_BY_ID.has(m[1]!), `ensure ${m[1]} isn't a catalog mod`);
+  assert.equal(fivemAdapter.status, "config");
+  assert.ok(out.notes.some((n) => /Configuration only/.test(n)));
+  const ref = JSON.parse(out.files.find((f) => f.path === "riptide/blueprint-config.json")!.contents);
+  assert.match(ref.note, /Reference only/);
+  assert.ok(FIVEM_CAPABILITIES.some((c) => c.section === "rulebook" && c.support === "ignored"));
+});
+
+test("fivem build leaves out mods that aren't released", () => {
+  const bp = load();
+  bp.mods.push({ id: "riptide-voice", enabled: true } as never);
+  const cfg = fivemAdapter.build(bp).files[0]!.contents;
+  assert.ok(!/ensure riptide-voice/.test(cfg));
+  const compat = checkCompatibility(bp);
+  assert.ok(compat.issues.some((i) => i.code === "planned" && /isn't released yet/.test(i.message)));
+});
+
+test("clock times: real times only", () => {
+  const ok: [string, string][] = [["00:00", "00:00"], ["12am", "00:00"], ["12pm", "12:00"], ["9pm", "21:00"], ["6", "06:00"], ["23:59", "23:59"], ["1:05 am", "01:05"]];
+  for (const [i, o] of ok) assert.equal(to24h(i), o, i);
+  for (const bad of ["24:00", "25:99", "99:99", "11:75", "0am", "13pm", "7:5", "noon", ""]) assert.equal(to24h(bad), null, bad);
+});
+
+test("rulebook: invalid times never become schedules", () => {
+  const c = compileRulebook("- Restart at 25:99\n- Restarts daily at 6am and 99:99\n- Civilians can't race between 6am and 11:75\n- Restart at 6am and 6pm");
+  assert.equal(c.rules[0]!.enforcement, null);
+  assert.match(c.rules[0]!.warning!, /25:99/);
+  assert.equal(c.rules[1]!.enforcement, null);
+  assert.match(c.rules[1]!.warning!, /99:99/);
+  assert.equal(c.rules[2]!.enforcement, null);
+  assert.match(c.rules[2]!.warning!, /11:75/);
+  assert.deepEqual(c.rules[3]!.enforcement, { kind: "schedule", action: "restart", times: ["06:00", "18:00"] });
+  assert.equal(c.enforced, 1);
+});
+
+test("rules page makes no enforcement claims", () => {
+  const bp = load();
+  const md = renderRulesMarkdown(bp.meta.name, compileRulebook(bp.rulebook));
+  assert.ok(!/automatic/i.test(md));
+  const first = renderDiscordEmbed(bp.meta.name, compileRulebook(bp.rulebook));
+  assert.ok(!JSON.stringify(first).match(/enforced automatically/));
+});
+
+test("discord: long rulebooks are split, never cut off", () => {
+  const sections = Array.from({ length: 30 }, (_, s) => `# Section ${s}\n` + Array.from({ length: 40 }, (_, i) => `- Rule ${s}.${i} ${"is quite a long rule ".repeat(3)}`).join("\n")).join("\n");
+  const c = compileRulebook(sections);
+  const messages = renderDiscordMessages("Test", c);
+  const embeds = messages.flatMap((m) => m.embeds);
+  const allText = embeds.flatMap((e) => e.fields.map((f) => f.value)).join("\n");
+  for (const r of c.rules) assert.ok(allText.includes(r.text), `missing: ${r.text}`);
+  for (const m of messages) assert.ok(m.embeds.length <= 10);
+  for (const e of embeds) {
+    assert.ok(e.fields.length <= 25);
+    assert.ok(e.fields.every((f) => f.value.length <= 1024 && f.name.length <= 256));
+    assert.ok(e.title.length + e.fields.reduce((n, f) => n + f.name.length + f.value.length, 0) <= 6000);
+  }
+  assert.ok(messages.length > 1);
+});
+
+test("roles: loops and duplicate ids are rejected with the exact chain", () => {
+  const withRoles = (roles: unknown[]) => {
+    const b = structuredClone(raw);
+    b.roles = roles.map((r) => ({ color: "#3df2d0", ...(r as object) }));
+    b.access.queuePriority = [];
+    return validateBlueprint(b);
+  };
+  const r1 = withRoles([{ id: "a", name: "A", permissions: [], inherits: "b" }, { id: "b", name: "B", permissions: [], inherits: "a" }]);
+  assert.equal(r1.ok, false);
+  assert.ok(!r1.ok && r1.issues.some((i) => /a → b → a/.test(i.message)));
+  const r2 = withRoles([{ id: "a", name: "A", permissions: [], inherits: "a" }]);
+  assert.ok(!r2.ok && r2.issues.some((i) => /a → a/.test(i.message)));
+  const r3 = withRoles([{ id: "a", name: "A", permissions: [] }, { id: "a", name: "A2", permissions: [] }]);
+  assert.ok(!r3.ok && r3.issues.some((i) => /Two roles use the id "a"/.test(i.message)));
+  const r4 = withRoles([{ id: "a", name: "A", permissions: [] }, { id: "b", name: "B", permissions: [], inherits: "a" }, { id: "c", name: "C", permissions: [], inherits: "a" }]);
+  assert.equal(r4.ok, true, JSON.stringify(!r4.ok && r4.issues));
+  assert.deepEqual(roleCycles([{ id: "x", name: "X", permissions: [], inherits: "y" }, { id: "y", name: "Y", permissions: [], inherits: "z" }, { id: "z", name: "Z", permissions: [], inherits: "y" }] as never), [["y", "z"]]);
+});
+
+test("fivem build refuses a Blueprint with a role loop", () => {
+  const bp = load();
+  bp.roles = [{ id: "a", name: "A", permissions: [], inherits: "b" }, { id: "b", name: "B", permissions: [], inherits: "a" }] as never;
+  assert.throws(() => fivemAdapter.build(bp), /loop/);
+});
+
+test("load order: one provider per need, so two providers don't make a false loop", () => {
+  const mk = (id: string, provides: string[], requires: string[]) => ({ id, name: id, category: "x", summary: "", provides, requires, engines: ["fivem"], cost: { serverMs: 0, clientMB: 0, streamMB: 0, downloadMB: 0 }, status: "ready", author: "t" }) as never;
+  // b and c both provide "radio"; c also needs "phone", which only b gives. Depending on every
+  // radio provider would make b wait for c and c wait for b.
+  const items = [mk("a", ["phone-app"], ["radio"]), mk("b", ["radio", "phone"], []), mk("c", ["radio"], ["phone"])];
+  const { order, cycle } = resolveLoadOrder(items);
+  assert.deepEqual(cycle, []);
+  assert.ok(order.indexOf("b") < order.indexOf("a"));
+  assert.ok(order.indexOf("b") < order.indexOf("c"));
+});
+
+test("docker stack says it's an example", () => {
+  const out = buildDockerStack(load());
+  assert.match(out.files[0]!.contents, /EXAMPLE ONLY/);
+  assert.ok(out.notes.some((n) => /Example only/.test(n)));
 });

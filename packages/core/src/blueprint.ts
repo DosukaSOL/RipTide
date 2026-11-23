@@ -173,11 +173,19 @@ export function validateBlueprint(input: unknown):
   const bp = parsed.data;
   const issues: ValidationIssue[] = [];
   const roleIds = new Set(bp.roles.map((r) => r.id));
+  const firstIndex = new Map<string, number>();
   bp.roles.forEach((r, i) => {
+    if (firstIndex.has(r.id)) {
+      issues.push({ path: `roles.${i}.id`, message: `Two roles use the id "${r.id}" (roles ${firstIndex.get(r.id)! + 1} and ${i + 1}). Give each role its own id.` });
+    } else firstIndex.set(r.id, i);
     if (r.inherits && !roleIds.has(r.inherits)) {
       issues.push({ path: `roles.${i}.inherits`, message: `Role "${r.inherits}" doesn't exist` });
     }
   });
+  for (const cycle of roleCycles(bp.roles)) {
+    const i = firstIndex.get(cycle[0]!) ?? 0;
+    issues.push({ path: `roles.${i}.inherits`, message: `Roles inherit from each other in a loop: ${[...cycle, cycle[0]].join(" → ")}. Remove one "inherits" to break it.` });
+  }
   const share = bp.economy.jobs.reduce((s, j) => s + j.share, 0);
   if (share > 1.0001) {
     issues.push({ path: "economy.jobs", message: `Job shares add up to ${(share * 100).toFixed(0)}%, keep them at or below 100%` });
@@ -186,6 +194,30 @@ export function validateBlueprint(input: unknown):
     if (!roleIds.has(q.role)) issues.push({ path: `access.queuePriority.${i}.role`, message: `Role "${q.role}" doesn't exist` });
   });
   return issues.length ? { ok: false, issues } : { ok: true, blueprint: bp };
+}
+
+/** Every inheritance loop among roles, each listed once, starting from its first role in the list. */
+export function roleCycles(roles: Role[]): string[][] {
+  const parent = new Map<string, string | undefined>();
+  for (const r of roles) if (!parent.has(r.id)) parent.set(r.id, r.inherits);
+  const found: string[][] = [];
+  const inCycle = new Set<string>();
+  for (const r of roles) {
+    const path: string[] = [];
+    const at = new Map<string, number>();
+    let cur: string | undefined = r.id;
+    while (cur !== undefined && parent.has(cur) && !at.has(cur) && !inCycle.has(cur)) {
+      at.set(cur, path.length);
+      path.push(cur);
+      cur = parent.get(cur);
+    }
+    if (cur !== undefined && at.has(cur)) {
+      const cycle = path.slice(at.get(cur)!);
+      cycle.forEach((c) => inCycle.add(c));
+      found.push(cycle);
+    }
+  }
+  return found;
 }
 
 /** Resolve a role's full permission set, following `inherits`. */

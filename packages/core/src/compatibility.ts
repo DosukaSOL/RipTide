@@ -43,7 +43,9 @@ export function checkCompatibility(bp: Pick<Blueprint, "mods" | "engine">, catal
       continue;
     }
     if (item.status === "planned") {
-      issues.push({ level: "info", code: "planned", mods: [item.id], message: `${item.name} is planned. It will install automatically when it ships.` });
+      // Not released, so there's nothing to install or start. Keep it out of the build.
+      issues.push({ level: "warning", code: "planned", mods: [item.id], message: `${item.name} isn't released yet, so it's left out of the build.` });
+      continue;
     }
     active.push(item);
   }
@@ -103,15 +105,27 @@ export function checkCompatibility(bp: Pick<Blueprint, "mods" | "engine">, catal
   return { issues, loadOrder: order, ok: !issues.some((i) => i.level === "error") };
 }
 
-/** Kahn's algorithm over "requires capability -> provided by" edges. Stable by original order. */
+/**
+ * Kahn's algorithm over "requires capability -> provided by" edges. Stable by original order.
+ * Each requirement depends on one provider (the first released one in the list), not on every
+ * mod that offers the capability: two mods that both provide "radio" don't both have to start
+ * first, and depending on all of them could report loops that aren't there.
+ */
 export function resolveLoadOrder(items: CatalogItem[]): { order: string[]; cycle: string[] } {
-  const providers = new Map<string, string[]>();
-  items.forEach((i) => i.provides.forEach((p) => providers.set(p, [...(providers.get(p) ?? []), i.id])));
+  const rank = { ready: 0, beta: 1, planned: 2 } as const;
+  const providers = new Map<string, CatalogItem[]>();
+  items.forEach((i) => i.provides.forEach((p) => providers.set(p, [...(providers.get(p) ?? []), i])));
+  const pick = (cap: string, self: string) =>
+    (providers.get(cap) ?? []).filter((p) => p.id !== self).sort((a, b) => rank[a.status] - rank[b.status])[0];
 
   const deps = new Map<string, Set<string>>();
   for (const i of items) {
     const d = new Set<string>();
-    i.requires.forEach((r) => (providers.get(r) ?? []).forEach((p) => p !== i.id && d.add(p)));
+    // A mod that provides a capability itself doesn't need another mod for it.
+    i.requires.filter((r) => !i.provides.includes(r)).forEach((r) => {
+      const p = pick(r, i.id);
+      if (p) d.add(p.id);
+    });
     deps.set(i.id, d);
   }
 

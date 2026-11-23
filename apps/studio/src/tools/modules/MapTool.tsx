@@ -71,7 +71,7 @@ export function MapTool() {
   return (
     <DetachedGuard tool="map">
       <div className="rt-page" style={detached ? { maxWidth: "none" } : undefined}>
-        <PageHeader crumb="Interactive Map" title="Find your next discovery." sub="The official map of Leonida, with places to find, progress to track and your own markers. Pop it out to a second screen any time." right={<HeaderRight />} />
+        <PageHeader crumb="Interactive Map" title="Find your next discovery." sub="Rockstar's official map of Leonida, with community-mapped places to find, progress to track and your own markers. Pop it out to a second screen any time." right={<HeaderRight />} />
         <MapBody />
       </div>
     </DetachedGuard>

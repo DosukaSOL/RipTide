@@ -42,7 +42,8 @@ The engine has no UI and no network access. The Studio and the CLI both call it 
 
 An adapter takes a valid Blueprint and returns files. Today:
 
-- **FiveM** writes `server.cfg`, a runtime config the Riptide runtime resource applies in game, and the rules page.
+- **FiveM** writes `server.cfg` (settings, mods in start order, roles as ACE groups), the rules page, and `riptide/blueprint-config.json`, a reference copy of the world, economy and rules that nothing applies in-game yet. `FIVEM_CAPABILITIES` lists what's applied and what isn't. There's no RipTide server runtime yet.
+- **Docker** writes an example compose file. The Riptide images it names aren't published yet.
 - **Docker** writes a compose stack for self-hosting.
 - **GTA VI** writes a portable bundle and a capability report. When Rockstar ships PC server tooling, this adapter learns to speak it. Nothing upstream changes.
 

@@ -21,14 +21,15 @@ export function Deploy() {
   const readiness = useMemo(() => assessReadiness(bp), [bp]);
   const region = REGIONS.find((r) => r.id === bp.meta.region) ?? REGIONS[0]!;
 
+  // What a real deploy would do. Only the first two steps happen here (in your browser);
+  // the rest are shown so you can see the plan. Nothing is reserved, started or posted.
   const steps = [
-    "Checking Blueprint",
-    `Compiling for FiveM, ${bp.mods.filter((m) => m.enabled).length} mods in start order`,
-    "Writing server.cfg and runtime config",
-    `Reserving ${hosting.vcpu} vCPU in ${region.city}`,
-    "Restoring database snapshot",
-    "Starting server",
-    "Posting rules to Discord",
+    "Checked Blueprint",
+    `Built server.cfg: ${bp.mods.filter((m) => m.enabled).length} mods in start order, roles and settings`,
+    `Simulated: reserve ${hosting.vcpu} vCPU in ${region.city}`,
+    "Simulated: restore database snapshot",
+    "Simulated: start server",
+    "Simulated: post rules to Discord (nothing was posted)",
   ];
 
   const deploy = () => {
@@ -45,15 +46,21 @@ export function Deploy() {
       }, 450 + i * 520));
     });
     timers.current.push(window.setTimeout(() => {
-      setLog((l) => [...l, { t: `${((Date.now() - start) / 1000).toFixed(1)}s`, m: `${bp.meta.name} is live`, ok: true }]);
+      setLog((l) => [...l, { t: `${((Date.now() - start) / 1000).toFixed(1)}s`, m: "Simulation complete. No server was started.", ok: true }]);
       setProgress(100);
       setState("done");
-      toast(`Deployed ${bp.meta.name}`);
+      toast("Simulation complete. No server was started.");
     }, 450 + steps.length * 520));
   };
 
   const download = () => {
-    const cfg = fivemAdapter.build(bp).files.find((f) => f.path === "server.cfg")!.contents;
+    let cfg: string;
+    try {
+      cfg = fivemAdapter.build(bp).files.find((f) => f.path === "server.cfg")!.contents;
+    } catch (e) {
+      toast((e as Error).message);
+      return;
+    }
     const url = URL.createObjectURL(new Blob([cfg], { type: "text/plain" }));
     const a = document.createElement("a");
     a.href = url;
@@ -64,15 +71,15 @@ export function Deploy() {
 
   return (
     <>
-      <PageHead title="Deploy" sub="Pick where your server runs. Riptide builds it, starts it and keeps every version so you can roll back." />
+      <PageHead title="Deploy" sub="Riptide hosting isn't open yet. Download your server.cfg here, or run a simulation to see what a deploy will do." />
       <div className="grid g-main">
         <div className="grid">
           <section className="panel panel-pad">
             <h2 style={{ marginBottom: 14 }}>Game</h2>
             <button className="target" aria-pressed={target === "fivem"} onClick={() => setTarget("fivem")}>
               <span className="tic" style={{ color: "var(--seafoam)" }}>V</span>
-              <span><b>GTA V on FiveM</b><span>Ready today. Your Blueprint moves to GTA VI when support lands.</span></span>
-              <span className="chip sea">Ready</span>
+              <span><b>GTA V on FiveM</b><span>Exports server.cfg with your mods, roles and settings. World, economy and rules aren't applied in-game yet.</span></span>
+              <span className="chip sea">Config export</span>
             </button>
             <button className="target" aria-pressed={target === "gta6"} onClick={() => setTarget("gta6")}>
               <span className="tic" style={{ color: "var(--flamingo)" }}>VI</span>
@@ -81,8 +88,8 @@ export function Deploy() {
             </button>
             <button className="target" aria-pressed={target === "docker"} onClick={() => setTarget("docker")}>
               <span className="tic" style={{ color: "var(--sky)", fontSize: 13 }}>Host</span>
-              <span><b>Your own machine</b><span>Get a docker-compose stack and run it anywhere.</span></span>
-              <span className="chip dim">CLI</span>
+              <span><b>Your own machine</b><span>An example docker-compose file. The Riptide server images it names aren't published yet.</span></span>
+              <span className="chip dim">Example</span>
             </button>
           </section>
 
@@ -128,7 +135,8 @@ export function Deploy() {
 
         <aside className="grid">
           <section className="panel panel-pad">
-            <h2 style={{ marginBottom: 10 }}>Monthly estimate</h2>
+            <h2 style={{ marginBottom: 4 }}>Rough monthly cost</h2>
+            <p className="muted small" style={{ margin: "0 0 10px" }}>An estimate from your slots and mods, not a price. Riptide hosting isn't open yet.</p>
             {hosting.breakdown.map((b) => (
               <div className="cost-line" key={b.label}><span>{b.label}</span><span className="num">{money(b.usd)}</span></div>
             ))}
@@ -145,22 +153,24 @@ export function Deploy() {
               style={{ ["--fill" as string]: state === "idle" ? (target === "gta6" ? "0%" : "100%") : `${progress}%` }}
               onClick={deploy}
               disabled={target !== "fivem" || state === "running"}
+              aria-describedby="rt-sim-note"
             >
               <svg className="wave" viewBox="0 0 40 56" preserveAspectRatio="none" aria-hidden="true"><path d="M20 0 C 34 10 6 18 20 28 C 34 38 6 46 20 56 L 0 56 L 0 0 Z" fill="#ff4f9a" /></svg>
               <span className={state === "idle" && target === "fivem" ? "ink" : ""}>
-                {target === "gta6" ? "Not available yet" : target === "docker" ? "Use riptide build --target docker" : state === "running" ? `Deploying… ${progress}%` : state === "done" ? "Live" : `Deploy to ${region.city}`}
+                {target === "gta6" ? "Not available yet" : target === "docker" ? "Use riptide build --target docker" : state === "running" ? `Simulating… ${progress}%` : state === "done" ? "Simulation complete" : "Run deployment simulation"}
               </span>
             </button>
+            <p id="rt-sim-note" className="muted small" style={{ margin: 0 }}>A simulation only. It doesn't start a server or post anything.</p>
             <button className="btn" onClick={download}><LuDownload />Download server.cfg</button>
           </section>
             <section className="panel panel-pad">
             <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-              <h2>Deploy log</h2>
-              <span className="chip dim" style={{ marginLeft: "auto" }}>Simulated</span>
+              <h2>Simulation log</h2>
+              <span className="chip sun" style={{ marginLeft: "auto" }}>Not a real deploy</span>
             </div>
-            <p className="muted small" style={{ margin: "0 0 12px" }}>This preview build simulates deploys until Riptide hosting opens.</p>
+            <p className="muted small" style={{ margin: "0 0 12px" }}>Riptide hosting isn't open yet, so no server is reserved or started.</p>
             <div className="log" aria-live="polite">
-              {!log.length && <span className="muted">Press Deploy to build and start {bp.meta.name}.</span>}
+              {!log.length && <span className="muted">Run the simulation to see each step a deploy of {bp.meta.name} will take.</span>}
               {log.map((l, i) => (
                 <div key={i} className={l.ok ? "ok" : ""}><span className="t">{l.t}</span>{l.ok ? "● " : "  "}{l.m}</div>
               ))}

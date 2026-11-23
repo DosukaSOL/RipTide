@@ -1,6 +1,6 @@
 import { useDeferredValue, useMemo } from "react";
-import { LuCog, LuUserRound, LuCopy } from "react-icons/lu";
-import { compileRulebook, renderDiscordEmbed, renderRulesMarkdown } from "@riptide/core";
+import { LuCog, LuUserRound, LuCopy, LuTriangleAlert } from "react-icons/lu";
+import { compileRulebook, renderDiscordMessages, renderRulesMarkdown } from "@riptide/core";
 import { useStore } from "../lib/store";
 import { Logo, PageHead } from "../components/ui";
 
@@ -8,7 +8,9 @@ export function Rulebook() {
   const { bp, edit, toast } = useStore();
   const source = useDeferredValue(bp.rulebook);
   const compiled = useMemo(() => compileRulebook(source), [source]);
-  const embed = useMemo(() => renderDiscordEmbed(bp.meta.name, compiled).embeds[0]!, [bp.meta.name, compiled]);
+  const messages = useMemo(() => renderDiscordMessages(bp.meta.name, compiled), [bp.meta.name, compiled]);
+  const embed = messages[0]!.embeds[0]!;
+  const embedCount = messages.reduce((n, m) => n + m.embeds.length, 0);
 
   const sections = useMemo(() => {
     const m = new Map<string, typeof compiled.rules>();
@@ -29,13 +31,13 @@ export function Rulebook() {
     <>
       <PageHead
         title="Rulebook"
-        sub="Write rules the way you'd explain them to a new player. Riptide enforces the ones it understands and leaves the rest to your staff."
+        sub="Write rules the way you'd explain them to a new player. Riptide marks the ones it can read as machine-readable rules. Nothing enforces them in-game yet: no Riptide server runtime ships today."
         actions={<button className="btn" onClick={copy}><LuCopy />Copy rules page</button>}
       />
       <section className="panel" style={{ marginBottom: 16 }}>
         <div className="panel-head">
           <h2>Your rules</h2>
-          <span className="chip sea" style={{ marginLeft: 8 }}>{compiled.enforced} automatic</span>
+          <span className="chip sea" style={{ marginLeft: 8 }} title="Riptide understood these. They aren't enforced in-game until a server runtime ships.">{compiled.enforced} parsed, not yet enforced</span>
           <span className="chip dim">{compiled.guidance} for staff</span>
           <span className="meta">Start a line with # to make a section</span>
         </div>
@@ -59,10 +61,10 @@ export function Rulebook() {
                 <h3>{name}</h3>
                 {rules.map((r) => (
                   <div className={`rule ${r.enforcement ? "auto" : "staff"}`} key={`${r.line}-${r.text}`}>
-                    <span className="ric">{r.enforcement ? <LuCog /> : <LuUserRound />}</span>
+                    <span className="ric">{r.enforcement ? <LuCog /> : r.warning ? <LuTriangleAlert /> : <LuUserRound />}</span>
                     <div>
                       <div className="rt">{r.text}</div>
-                      <div className="re">{r.effect}</div>
+                      <div className="re">{r.warning ?? (r.enforcement ? `Parsed: ${r.effect}` : r.effect)}</div>
                     </div>
                   </div>
                 ))}
@@ -73,7 +75,7 @@ export function Rulebook() {
       </section>
 
       <section className="panel">
-        <div className="panel-head"><h2>Discord post</h2><span className="meta">Posted to #rules on every deploy</span></div>
+        <div className="panel-head"><h2>Discord post</h2><span className="meta">Preview. Riptide doesn't post to Discord yet{embedCount > 1 ? `. Long rulebooks are split over ${embedCount} embeds` : ""}</span></div>
         <div className="panel-pad">
           <div className="discord">
             <div className="av"><Logo size={26} /></div>
@@ -87,7 +89,7 @@ export function Rulebook() {
                     {f.value.split("\n").slice(0, 3).map((l, i) => <div key={i}>{l.replace(/\*\*/g, "")}</div>)}
                   </div>
                 ))}
-                <div className="foot">{embed.footer.text}</div>
+                {embedCount > 1 && <div className="foot">Continued in {embedCount - 1} more embed{embedCount > 2 ? "s" : ""}</div>}
               </div>
             </div>
           </div>

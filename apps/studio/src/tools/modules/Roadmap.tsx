@@ -32,7 +32,7 @@ export function Roadmap() {
                   <p>{r.summary}</p>
                 </div>
                 <div className="rt-pill-row" style={{ justifyContent: "flex-end", maxWidth: 260 }}>
-                  {r.gates.map((g) => <span key={g} className={`rt-badge${g.startsWith("gta6") ? " rt-sun" : ""}`}>Needs {GATE_LABEL[g]}</span>)}
+                  {r.gates.map((g) => <span key={g} className={`rt-badge${g.startsWith("gta6") ? " rt-sun" : g === "buildable" ? " rt-sea" : ""}`}>{g === "buildable" ? GATE_LABEL[g] : `Needs ${GATE_LABEL[g]}`}</span>)}
                 </div>
               </li>
             ))}

@@ -1,18 +1,40 @@
 import type { Blueprint } from "../blueprint";
-import { effectivePermissions } from "../blueprint";
+import { effectivePermissions, roleCycles } from "../blueprint";
 import { checkCompatibility } from "../compatibility";
 import { compileRulebook } from "../rules/rulebook";
-import type { Adapter, BuildResult } from "./types";
+import type { Adapter, AdapterCapability, BuildResult } from "./types";
 
-/** Compiles a Blueprint into an FXServer (FiveM) server-data folder. */
+/**
+ * What the FiveM build applies today. RipTide doesn't ship a server runtime yet, so the parts of
+ * a Blueprint that need code running inside the server (world, economy, rules) aren't applied.
+ * They're written to riptide/blueprint-config.json for reference only; the server never loads it.
+ */
+export const FIVEM_CAPABILITIES: AdapterCapability[] = [
+  { section: "meta", support: "applied", note: "Server name, description, tags, language and player slots in server.cfg." },
+  { section: "mods", support: "applied", note: "Enabled mods are started in dependency order. Mods with compatibility errors are left out." },
+  { section: "roles", support: "applied", note: "Roles become ACE groups with their permissions and inheritance." },
+  { section: "engine", support: "applied", note: "Enforced game build." },
+  { section: "world", support: "ignored", note: "Weather, time and zones need a server runtime. Not applied yet." },
+  { section: "economy", support: "ignored", note: "Wages, taxes and prices need a server runtime. Not applied yet." },
+  { section: "rulebook", support: "ignored", note: "Rules are parsed and published as RULES.md, but nothing enforces them in-game yet." },
+  { section: "access", support: "ignored", note: "Whitelist and queue priority need a server runtime. Not applied yet." },
+  { section: "schedule", support: "ignored", note: "Restart times need txAdmin or a server runtime. Not applied yet." },
+];
+
+/** Compiles a Blueprint into an FXServer (FiveM) server.cfg. Configuration only: see FIVEM_CAPABILITIES. */
 export const fivemAdapter: Adapter = {
   id: "fivem",
   label: "FiveM (GTA V)",
-  status: "ready",
+  status: "config",
+  capabilities: FIVEM_CAPABILITIES,
   build(bp: Blueprint): BuildResult {
+    const cycles = roleCycles(bp.roles);
+    if (cycles.length) throw new Error(`Roles inherit from each other in a loop (${cycles[0]!.join(" → ")}). Fix the Blueprint before building.`);
     const compat = checkCompatibility(bp);
     const rules = compileRulebook(bp.rulebook);
-    const notes: string[] = [];
+    const notes: string[] = [
+      "Configuration only: server.cfg applies your settings, mods and roles. World, economy, rules, access and schedule aren't applied in-game yet (no RipTide server runtime ships today).",
+    ];
     if (!compat.ok) notes.push("Some mods have compatibility problems. They are left out of server.cfg until fixed.");
     const blocked = new Set(compat.issues.filter((i) => i.level === "error").flatMap((i) => i.mods));
     const order = compat.loadOrder.filter((id) => !blocked.has(id));
@@ -42,8 +64,8 @@ export const fivemAdapter: Adapter = {
       `sv_licenseKey "{{secret:CFX_LICENSE_KEY}}"`,
       `set mysql_connection_string "{{secret:DATABASE_URL}}"`,
       ``,
-      `# Riptide runtime: world, economy, rulebook enforcement`,
-      `ensure riptide-runtime`,
+      `# World, economy, rules, access and schedule from the Blueprint are not applied here yet.`,
+      `# They're saved in riptide/blueprint-config.json for reference; the server doesn't load it.`,
       ``,
       `# Mods, in dependency order`,
       ...order.map((id) => `ensure ${token(id)}`),
@@ -58,20 +80,31 @@ export const fivemAdapter: Adapter = {
       economy: bp.economy,
       visuals: bp.visuals,
       access: bp.access,
-      enforcement: rules.rules.filter((r) => r.enforcement).map((r) => r.enforcement),
+      rules: rules.rules.filter((r) => r.enforcement).map((r) => r.enforcement),
       schedule: bp.schedule,
     };
+    const readme = [
+      `What this folder contains`,
+      ``,
+      `server.cfg`,
+      `  Ready to use with FXServer. Applies:`,
+      ...FIVEM_CAPABILITIES.filter((c) => c.support === "applied").map((c) => `  - ${c.section}: ${c.note}`),
+      ``,
+      `riptide/blueprint-config.json`,
+      `  Reference only. FXServer doesn't read it, and nothing below is applied in-game yet:`,
+      ...FIVEM_CAPABILITIES.filter((c) => c.support === "ignored").map((c) => `  - ${c.section}: ${c.note}`),
+      ``,
+      `Fill in the {{secret:...}} placeholders in server.cfg before starting the server.`,
+      ``,
+    ].join("\n");
 
     return {
       target: "fivem",
       notes,
       files: [
         { path: "server.cfg", contents: cfg },
-        { path: "resources/riptide-runtime/blueprint.json", contents: JSON.stringify(runtimeConfig, null, 2) },
-        {
-          path: "resources/riptide-runtime/fxmanifest.lua",
-          contents: `fx_version 'cerulean'\ngame 'gta5'\nname 'riptide-runtime'\ndescription 'Applies your Riptide Blueprint at runtime'\nserver_script 'server.js'\nclient_script 'client.js'\nfiles { 'blueprint.json' }\n`,
-        },
+        { path: "riptide/blueprint-config.json", contents: JSON.stringify({ note: "Reference only. FXServer doesn't load this file and nothing in it is applied in-game yet.", ...runtimeConfig }, null, 2) },
+        { path: "riptide/README.txt", contents: readme },
       ],
     };
   },

@@ -31,7 +31,7 @@ export function Overview() {
       <section className="hero">
         <div>
           <div className="hero-row">
-            <span className="chip sea"><span className="dot" />FiveM build ready</span>
+            <span className="chip sea"><span className="dot" />FiveM config export</span>
             <span className="chip dim">{region?.city ?? bp.meta.region}</span>
             {bp.access.whitelist && <span className="chip dim">Whitelisted</span>}
           </div>

@@ -13,7 +13,7 @@
 <p align="center">
   <img alt="Status: preview" src="https://img.shields.io/badge/status-preview-FFB36B?style=flat-square&labelColor=130F26">
   <img alt="Interactive Map: official GTA VI map" src="https://img.shields.io/badge/map-official%20Leonida-3DF2D0?style=flat-square&labelColor=130F26">
-  <img alt="GTA V on FiveM: ready" src="https://img.shields.io/badge/GTA%20V%20%2F%20FiveM-ready-3DF2D0?style=flat-square&labelColor=130F26">
+  <img alt="GTA V on FiveM: server.cfg export" src="https://img.shields.io/badge/GTA%20V%20%2F%20FiveM-config%20export-3DF2D0?style=flat-square&labelColor=130F26">
   <img alt="GTA VI on PC: waiting on Rockstar" src="https://img.shields.io/badge/GTA%20VI%20on%20PC-waiting%20on%20Rockstar-FF4F9A?style=flat-square&labelColor=130F26">
   <img alt="License: all rights reserved" src="https://img.shields.io/badge/license-all%20rights%20reserved-A69DC9?style=flat-square&labelColor=130F26">
 </p>
@@ -35,7 +35,7 @@
 > [!IMPORTANT]
 > **We're building ahead of GTA VI on PC.** GTA VI is out on consoles, and RipTide's Interactive Map already uses the official map of Leonida. Rockstar hasn't announced the PC release, GTA VI Online, or how community servers will work, so everything that needs the game on PC waits for that.
 >
-> Expect **lots of updates and some big changes** as we learn more about GTA VI on PC and GTA VI Online. Until then, RipTide Studio builds GTA V servers on FiveM, and every Blueprint you design is made to move to GTA VI when support lands.
+> Expect **lots of updates and some big changes** as we learn more about GTA VI on PC and GTA VI Online. Until then, RipTide Studio designs GTA V servers and exports their FiveM `server.cfg`, and every Blueprint you design is made to move to GTA VI when support lands.
 
 <p align="center">
   <img src="docs/screenshots/tools-map-full.png" alt="RipTide Tools Interactive Map showing the official map of Leonida with place markers, progress and filters" width="100%">
@@ -50,7 +50,7 @@ RipTide is one app for your whole GTA setup. Five tools live side by side, stay 
 | **Interactive Map** | The official map of Leonida with 884 places to find in nine categories. Search, region filters, found tracking across up to eight playthroughs, favourites, your own markers and a second-screen pop-out. |
 | **ViceLab** | Real frame times from PresentMon, CapFrameX, MangoHud, OCAT and FrameView: average FPS, 1% and 0.1% lows, stability. Screenshot compare and settings picked from your own runs. |
 | **Heist Ops** | Plan the job with your crew: roles, phases, checklists and shared notes. Share a plan as a file. |
-| **RipTide Studio** | Design a roleplay or community server without code, check it fits together, and build it for FiveM. More below. |
+| **RipTide Studio** | Design a roleplay or community server without code, check it fits together, and export its FiveM `server.cfg`. More below. |
 | **Workspaces** | Detach tools into their own windows. They remember where they were and come back on screen if a monitor is unplugged. |
 
 <table>
@@ -92,19 +92,19 @@ These ideas are new for game servers, and most of them already work in the previ
 | | |
 | --- | --- |
 | **Economy forecast** | Simulates 60 days of your players' wallets before launch, so you see inflation and broke newcomers coming. Autopilot can nudge taxes to keep things steady. |
-| **Plain-English rulebook** | Write *"Police need at least 4 officers online before bank robberies."* RipTide enforces the rules it understands, leaves the rest to staff, and publishes one rules page plus a Discord post that never drift apart. |
+| **Plain-English rulebook** | Write *"Police need at least 4 officers online before bank robberies."* RipTide reads the rules it understands into machine-readable form, leaves the rest to staff, and publishes one rules page plus a Discord post that never drift apart. In-game enforcement needs a RipTide server runtime, which doesn't ship yet. |
 | **Mod compatibility check** | Spots duplicate systems, missing dependencies and wrong-game mods *before* you install, with one-click fixes and a worked-out start order. |
 | **Performance budget** | Server time, player memory and first-join download size, estimated for your player count while you browse mods. |
 | **Launch readiness** | A single score, drawn as a sun rising over the water. At 100 it clears the horizon. |
 | **Preview servers** | Branch your server, let staff test a change, then merge it. Coming with RipTide hosting. |
 | **Share codes** | Turn a whole server into a code that others can remix. |
-| **Engine-agnostic Blueprints** | The same Blueprint builds for FiveM today and GTA VI tomorrow. Only the adapter changes. |
+| **Engine-agnostic Blueprints** | The same Blueprint exports FiveM config today and is designed to move to GTA VI later. Only the adapter changes. |
 | **Region by community** | Picks the hosting region closest to where your Discord members actually are. |
 
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/economy.png" alt="Economy forecast chart with tax and job controls"><br><sub><b>Economy.</b> Wallet forecast, taxes, jobs and autopilot.</sub></td>
-    <td width="50%"><img src="docs/screenshots/rulebook.png" alt="Rulebook editor with plain-English rules compiled into automatic and staff rules"><br><sub><b>Rulebook.</b> Write it in English, see what's enforced.</sub></td>
+    <td width="50%"><img src="docs/screenshots/rulebook.png" alt="Rulebook editor with plain-English rules sorted into parsed rules and staff rules"><br><sub><b>Rulebook.</b> Write it in English, see what RipTide can read.</sub></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/mods.png" alt="Mods screen flagging a framework conflict with a one-click fix and a performance budget"><br><sub><b>Mods.</b> Conflicts caught before install, with a fix.</sub></td>
@@ -145,7 +145,7 @@ npm run riptide -- forecast examples/neon-coast.riptide.json
 npm run riptide -- build examples/neon-coast.riptide.json --target fivem --out dist/neon-coast
 ```
 
-The app runs entirely on your machine or in your browser. It doesn't send data anywhere, and hosted deploys are simulated until RipTide hosting opens.
+The app runs entirely on your machine or in your browser and never uploads your data. The only network request is the desktop app asking GitHub whether a new version is out, which you can switch off. Hosted deploys are a simulation until RipTide hosting opens.
 
 ## How it's built
 
@@ -179,7 +179,8 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - [x] Blueprint format, compatibility check, performance budget
 - [x] Economy forecast with autopilot
 - [x] Plain-English rulebook with Discord and web output
-- [x] FiveM adapter and docker stack
+- [x] FiveM `server.cfg` export (mods, roles, settings) and an example docker stack
+- [ ] RipTide server runtime: applying world, economy and rules in-game
 - [x] Studio design and startup animation
 - [x] RipTide Tools preview: ViceLab, Heist Ops, Interactive Map, Workspaces
 - [x] Official map of Leonida with places, found tracking and playthroughs

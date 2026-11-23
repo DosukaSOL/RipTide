@@ -34,7 +34,7 @@ ${bold("Usage")}
   riptide init [name]            Start a new Blueprint in this folder
   riptide check [file]           Validate, check mods, budget and readiness
   riptide forecast [file]        Simulate 60 days of your economy
-  riptide rules [file]           Show what your rulebook enforces
+  riptide rules [file]           Show which rules Riptide can read
   riptide build [file] [--target fivem|gta6|docker] [--out dir]
   riptide share [file]           Print a share code
   riptide import <code> [file]   Turn a share code into a Blueprint
@@ -143,8 +143,8 @@ switch (cmd) {
   case "rules": {
     const bp = load(findBlueprint(args[0]));
     const c = compileRulebook(bp.rulebook);
-    c.rules.forEach((r) => console.log(`  ${r.enforcement ? sea("⚙") : dim("¶")} ${r.text}\n    ${dim(r.effect)}`));
-    console.log(`\n  ${c.enforced} enforced automatically, ${c.guidance} for staff\n`);
+    c.rules.forEach((r) => console.log(`  ${r.enforcement ? sea("⚙") : r.warning ? sun("!") : dim("¶")} ${r.text}\n    ${dim(r.warning ?? r.effect)}`));
+    console.log(`\n  ${c.enforced} parsed (not enforced in-game yet: no server runtime ships today), ${c.guidance} for staff\n`);
     break;
   }
   case "build": {
@@ -152,7 +152,12 @@ switch (cmd) {
     const outDir = resolve(flag("out") ?? "dist");
     const bp = load(findBlueprint(args[0]));
     if (!["fivem", "gta6", "docker"].includes(target)) fail(`Unknown target "${target}". Use fivem, gta6 or docker.`);
-    const result = target === "docker" ? buildDockerStack(bp) : ADAPTERS[target].build(bp);
+    let result;
+    try {
+      result = target === "docker" ? buildDockerStack(bp) : ADAPTERS[target].build(bp);
+    } catch (e) {
+      fail((e as Error).message);
+    }
     if (target === "fivem") {
       const rules = renderRulesMarkdown(bp.meta.name, compileRulebook(bp.rulebook));
       result.files.push({ path: "RULES.md", contents: rules });
@@ -166,7 +171,7 @@ switch (cmd) {
     result.notes.forEach((n) => console.log(`  ${sun("!")} ${n}`));
     if (target !== "gta6") {
       const h = estimateHosting(bp);
-      console.log(`\n  Suggested machine: ${h.vcpu} vCPU, ${h.ramGB} GB memory. About $${h.monthlyUsd}/month hosted by Riptide.\n`);
+      console.log(`\n  Suggested machine: ${h.vcpu} vCPU, ${h.ramGB} GB memory. Rough estimate: about $${h.monthlyUsd}/month (Riptide hosting isn't open yet).\n`);
     }
     break;
   }

@@ -18,6 +18,20 @@ export interface BuildResult {
 export interface Adapter {
   id: string;
   label: string;
-  status: "ready" | "waiting";
+  /**
+   * config: writes real config files for the engine, but not every Blueprint section is applied
+   * (see `capabilities`). waiting: the engine can't be targeted yet.
+   */
+  status: "config" | "waiting";
+  /** What the build actually does with each part of a Blueprint. */
+  capabilities?: AdapterCapability[];
   build(bp: Blueprint): BuildResult;
+}
+
+export interface AdapterCapability {
+  /** Blueprint section, e.g. "mods" or "rulebook". */
+  section: string;
+  /** applied: written into config the engine reads. ignored: kept in the Blueprint, not applied. */
+  support: "applied" | "ignored";
+  note: string;
 }

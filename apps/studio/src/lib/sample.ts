@@ -4,7 +4,7 @@
  */
 
 export const DEPLOY_HISTORY = [
-  { id: "d7", title: "Rulebook update", detail: "Added beachfront speed limit, 2 rules now automatic", when: "12 min ago" },
+  { id: "d7", title: "Rulebook update", detail: "Added beachfront speed limit, 2 more rules parsed", when: "12 min ago" },
   { id: "d6", title: "Economy rebalance", detail: "Rent 900 → 550, unemployment pay added", when: "Yesterday" },
   { id: "d5", title: "Added Beach Club Interior", detail: "+160 MB download, merged from preview", when: "3 days ago" },
   { id: "d4", title: "First launch", detail: "128 slots, Miami", when: "Nov 2" },

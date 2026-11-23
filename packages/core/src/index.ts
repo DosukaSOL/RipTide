@@ -9,7 +9,7 @@ export * from "./hosting";
 export * from "./share";
 export * from "./diff";
 export * from "./adapters/types";
-export { fivemAdapter } from "./adapters/fivem";
+export { fivemAdapter, FIVEM_CAPABILITIES } from "./adapters/fivem";
 export { gta6Adapter, GTA6_CAPABILITIES } from "./adapters/gta6";
 export { buildDockerStack } from "./adapters/docker";
 

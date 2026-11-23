@@ -105,7 +105,7 @@ export function App({ embedded = false }: { embedded?: boolean } = {}) {
           })}
         </nav>
         <div className="side-foot">
-          <span className="engine-pill"><span className="dot" />FiveM ready</span>
+          <span className="engine-pill"><span className="dot" />FiveM server.cfg export</span>
           <span className="engine-pill"><span className="dot warn" />GTA VI waiting on Rockstar</span>
           {!embedded && (
             <a href="?shell=tools" className="try-tools">Try the RipTide Tools preview</a>
