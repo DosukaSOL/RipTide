@@ -71,9 +71,10 @@ function isAllowedUrl(url, feed) {
 }
 
 /* ---------- how this copy of the app can update ---------- */
-/** The .app bundle that holds the running executable, or null. */
+/** The .app bundle that holds the running executable, or null. macOS paths, so always POSIX. */
 function macBundle(execPath) {
-  const bundle = path.resolve(execPath, "..", "..", "..");
+  if (typeof execPath !== "string" || !execPath.startsWith("/")) return null;
+  const bundle = path.posix.resolve(execPath, "..", "..", "..");
   return bundle.endsWith(".app") ? bundle : null;
 }
 
@@ -102,7 +103,7 @@ function installMode({ platform, env = {}, execPath = "", packageType = null, wr
   if (platform === "darwin") {
     const bundle = macBundle(execPath);
     if (!bundle || bundle.startsWith("/Volumes/") || bundle.includes("/AppTranslocation/")) return "manual";
-    return writable(bundle) && writable(path.dirname(bundle)) ? "mac" : "manual";
+    return writable(bundle) && writable(path.posix.dirname(bundle)) ? "mac" : "manual";
   }
   return "manual";
 }

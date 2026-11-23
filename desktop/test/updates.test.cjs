@@ -130,7 +130,9 @@ test("an old copy that has exited but wasn't collected yet counts as gone (Linux
 });
 
 /* ---------- the macOS swap step, run with stand-ins for macOS's `open` and `xattr` ---------- */
-const hasBash = spawnSync("bash", ["-c", "true"]).status === 0;
+// The swap script runs on macOS; Linux has the same shell tools. Windows' Git Bash can't see
+// Windows process ids with `kill -0`, so these tests don't run there.
+const hasBash = process.platform !== "win32" && spawnSync("bash", ["-c", "true"]).status === 0;
 function swapFixture(withNew = true) {
   const root = tmp("riptide-swap-");
   const bin = path.join(root, "bin");
