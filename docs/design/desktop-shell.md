@@ -19,8 +19,10 @@ RipTide Tools ships as a desktop app for Windows, macOS and Linux, built from th
 ## Where data lives
 
 - `Documents/RipTide`, one readable JSON file per tool, for example `riptide.heist.v1.json`. If Documents isn't writable, the app's own data folder is used instead. **File → Open data folder** shows it, and so does Settings.
-- Writes are atomic (temp file, then rename), and the previous version is kept as `<file>.json.bak`. A damaged file falls back to its backup automatically.
-- On start, the files are loaded before anything reads storage. Data from earlier versions that only lived in the app's browser storage is copied to files the first time.
+- Writes are atomic (temp file, then rename), and the previous version is kept as `<file>.json.bak`. A damaged file never replaces a good backup.
+- A file that can't be read (cut off, or valid JSON in the wrong shape for its tool) is recovered from its backup, and the tool says so. If the backup is no good either, the tool starts fresh and keeps the unreadable copy as `<key>.unreadable`.
+- On start, the files are loaded before anything reads storage. The files are the truth: data that only lived in the app's browser storage (from earlier versions, or a save that failed) is copied to files, but a file you deleted yourself stays deleted. The app remembers which keys have had a file to tell the two apart.
+- If a file can't be loaded into the app at start (storage full), the app won't save over that file during the session.
 
 ## Updates
 
@@ -40,7 +42,8 @@ One click, like a game launcher: the app checks for a new version, shows a popup
 ## Builds and releases
 
 - `.github/workflows/desktop.yml` builds a Windows installer, a universal macOS DMG and zip, a Linux AppImage and a `.deb`, with the `latest*.yml` update files. Run it from the Actions tab with a version like `v0.2.0` (or push that tag) to publish a GitHub Release. The version you type becomes the app's version, so each release must be higher than the last one for installed apps to update.
-- The Linux build is launched and tested automatically (`desktop/test/app.e2e.mjs`): saving, restarts, backups, pop-outs, link handling, and no network or Node access.
+- The Linux build is launched and tested automatically (`desktop/test/app.e2e.mjs`): saving, restarts, backups and recovery, files deleted outside the app, the remembered shell choice, pop-outs, link handling, `app://` path safety, and no network or Node access.
+- `app://riptide/` only serves files inside the packaged app folder: undecodable addresses get 400, and `../`, encoded slashes, backslashes, null bytes and symlinks that lead outside get 403 (`desktop/appfiles.cjs`).
 - The builds aren't code-signed yet. macOS builds are signed ad hoc so they run on Apple silicon. Proper signing comes later.
 
 ## Building it yourself

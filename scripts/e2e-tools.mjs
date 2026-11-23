@@ -175,10 +175,16 @@ await check("rejects a file that isn't a capture with a readable message", async
 
 await check("start benchmark runs an honest timed session", async () => {
   const { ctx, page } = await fresh();
+  await page.clock.install();
   await page.goto(tools("vicelab"));
   await page.getByLabel("Game").selectOption("rdr2");
   await page.getByRole("button", { name: "Start benchmark" }).click();
-  await page.getByText(/doesn't record the game itself/).waitFor();
+  await page.getByText(/This is only a timer\. RipTide doesn't record the game/).waitFor();
+  assert.equal(await page.locator(".rt-timer").innerText(), "1:00");
+  // The countdown follows the clock, not the number of timer ticks: jumping 25 s ahead (as after
+  // a background tab or sleep) shows 0:35 straight away.
+  await page.clock.fastForward(25_000);
+  await page.waitForFunction(() => document.querySelector(".rt-timer")?.textContent === "0:35");
   await page.getByRole("button", { name: "I'm done" }).click();
   await page.getByRole("heading", { name: "Import your capture" }).waitFor();
   await ctx.close();
@@ -391,6 +397,134 @@ await check("desktop: saved files load first and every change is written to disk
   await page.reload();
   await page.goto(tools("heist"));
   assert.equal(await page.inputValue("#rt-plan-notes"), "changed in the app", "survives a restart");
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+async function withDesktop(ctx, { files, backups = {}, ls = {} }) {
+  await ctx.addInitScript(({ files, backups, ls }) => {
+    if (!sessionStorage.getItem("__seeded")) {
+      sessionStorage.setItem("__seeded", "1");
+      sessionStorage.setItem("__files", JSON.stringify(files));
+      for (const [k, v] of Object.entries(ls)) localStorage.setItem(k, v);
+    }
+    const store = JSON.parse(sessionStorage.getItem("__files"));
+    window.__writes = [];
+    window.riptideDesktop = {
+      readAll: () => ({ ...store }),
+      readBackup: (k) => backups[k] ?? null,
+      write: (k, v) => {
+        window.__writes.push([k, v]);
+        if (v === null) delete store[k];
+        else store[k] = v;
+        sessionStorage.setItem("__files", JSON.stringify(store));
+        return true;
+      },
+      dataDir: () => "C:\\Users\\you\\Documents\\RipTide",
+      openDataDir: () => {},
+      version: () => "0.1.0",
+    };
+  }, { files, backups, ls });
+}
+const plan = (id, name, notes) => ({ schema: 1, id, name, description: "", createdAt: 1, updatedAt: 1, roles: [], phases: [], notes });
+
+await check("desktop: a data file deleted outside the app isn't brought back", async () => {
+  const { ctx, page, errors } = await fresh();
+  // This key had a file before; now the file is gone but the browser engine still has a copy.
+  await withDesktop(ctx, {
+    files: {},
+    ls: { "riptide.heist.v1": JSON.stringify({ plans: [plan("p1", "Stale copy", "old")], activeId: "p1" }), "rt-desktop-on-disk-v1": JSON.stringify(["riptide.heist.v1"]) },
+  });
+  await page.goto(tools("heist"));
+  await page.getByRole("button", { name: "Create plan" }).waitFor();
+  assert.equal(await page.getByText("Stale copy").count(), 0, "stale copy not shown");
+  assert.ok(!(await page.evaluate(() => window.__writes.some(([k]) => k === "riptide.heist.v1"))), "stale copy not written back");
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("desktop: data that never reached disk is copied there once", async () => {
+  const { ctx, page } = await fresh();
+  await withDesktop(ctx, { files: {}, ls: { "riptide.heist.v1": JSON.stringify({ plans: [plan("p1", "From the browser era", "keep me")], activeId: "p1" }) } });
+  await page.goto(tools("heist"));
+  await page.getByRole("heading", { name: "From the browser era" }).waitFor();
+  assert.ok(await page.evaluate(() => window.__writes.some(([k, v]) => k === "riptide.heist.v1" && v.includes("keep me"))));
+  await ctx.close();
+});
+
+await check("desktop: a damaged save is recovered from its backup, and says so", async () => {
+  const { ctx, page, errors } = await fresh();
+  await withDesktop(ctx, {
+    files: { "riptide.heist.v1": JSON.stringify({ plans: [{ schema: 99 }] }) }, // valid JSON, wrong shape
+    backups: { "riptide.heist.v1": JSON.stringify({ plans: [plan("p1", "Good backup", "recovered")], activeId: "p1" }) },
+  });
+  await page.goto(tools("heist"));
+  await page.getByRole("heading", { name: "Good backup" }).waitFor();
+  await page.getByText(/restored the previous version from its backup/).waitFor();
+  await page.waitForFunction(() => window.__writes.some(([k, v]) => k === "riptide.heist.v1" && v && v.includes("recovered")));
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("two windows editing the same tool at once keep both changes", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(tools("heist"));
+  await page.getByRole("button", { name: "Create plan" }).click();
+  await page.fill("#rt-plan-notes", "start");
+  await page.waitForTimeout(300);
+  const other = await ctx.newPage();
+  await other.goto(tools("heist"));
+  await other.waitForSelector("#rt-plan-notes");
+  // Within the save delay: one window edits notes, the other adds a plan.
+  await Promise.all([page.fill("#rt-plan-notes", "notes from window one"), other.getByRole("button", { name: "New plan" }).click()]);
+  await page.waitForTimeout(800);
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("riptide.heist.v1")));
+  assert.equal(stored.plans.length, 2, "the plan added in window two survived");
+  assert.ok(stored.plans.some((p) => p.notes === "notes from window one"), "the notes typed in window one survived");
+  for (const p of [page, other]) {
+    await p.reload();
+    await p.waitForSelector("#rt-plan-pick");
+    assert.equal(await p.locator("#rt-plan-pick option").count(), 2);
+  }
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("backups: checked before restoring, all or nothing, and complete", async () => {
+  const { ctx, page, errors } = await fresh({ width: 1920, height: 1080 }, 1, { acceptDownloads: true });
+  await page.goto(tools("heist"));
+  await page.getByRole("button", { name: "Create plan" }).click();
+  await page.fill("#rt-plan-notes", "in the backup");
+  await page.waitForTimeout(300);
+  await page.goto(tools("settings"));
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export everything" }).click()]);
+  const backup = JSON.parse(await readFile(await dl.path(), "utf8"));
+  assert.equal(backup.version, 2);
+  assert.ok(backup.parts["riptide.heist.v1"].checksum, "parts carry checksums");
+  assert.ok(backup.parts["riptide.flags.v1"], "interface choice is included");
+  // Change the plan, then restore the backup.
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("riptide.heist.v1"));
+    s.plans[0].notes = "changed after the backup";
+    localStorage.setItem("riptide.heist.v1", JSON.stringify(s));
+  });
+  const good = join(tmpdir(), `riptide-backup-${process.pid}.json`);
+  await writeFile(good, JSON.stringify(backup));
+  // A damaged copy: one part edited without its checksum. Must change nothing.
+  const bad = join(tmpdir(), `riptide-backup-bad-${process.pid}.json`);
+  const tampered = structuredClone(backup);
+  tampered.parts["riptide.heist.v1"].data.plans[0].notes = "tampered";
+  await writeFile(bad, JSON.stringify(tampered));
+  await page.setInputFiles('section[data-module="settings"] input[type="file"]', bad);
+  await page.getByText(/Nothing was restored/).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Restore", exact: true }).count(), 0);
+  assert.match(await page.evaluate(() => localStorage.getItem("riptide.heist.v1")), /changed after the backup/);
+  await page.setInputFiles('section[data-module="settings"] input[type="file"]', good);
+  await page.getByText("This backup is valid. Restoring will:").waitFor();
+  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await page.waitForTimeout(1500);
+  await page.goto(tools("heist"));
+  assert.equal(await page.inputValue("#rt-plan-notes"), "in the backup");
   assert.deepEqual(errors, []);
   await ctx.close();
 });

@@ -5,3 +5,5 @@ export * from "./layout";
 export * from "./storage";
 export * from "./ids";
 export * from "./roadmap";
+export * from "./merge";
+export * from "./backup";

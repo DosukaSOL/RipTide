@@ -1,60 +1,76 @@
 import { useRef, useState } from "react";
 import { LuDownload, LuUpload, LuRotateCcw, LuFolderOpen, LuHardDrive, LuGlobe } from "react-icons/lu";
 import { desktopBridge, desktopWriteFailed } from "../../desktop";
-import { KEYS, Settings } from "@riptide/tools";
+import { z } from "zod";
+import { Blueprint } from "@riptide/core";
+import { applyRestore, BACKUP_MAX_BYTES, createBackup, Flags, HeistState, KEYS, LEGACY_KEYS, MapState, planRestore, Settings, ViceLabState, WorkspacesState, type BackupPart, type RestorePlan } from "@riptide/tools";
 import { PageHeader, SettingRow, Switch, useShell } from "../ui";
 import { HeaderRight } from "./common";
 import { readFlags, useToolsData, writeFlags } from "../data";
 import { downloadText, readFileText } from "../persist";
 import { UpdatesPanel } from "../Updates";
 
-/** Everything RipTide keeps on this device, by owner. */
-const DATA_KEYS: { key: string; label: string }[] = [
-  { key: "riptide.blueprint.v1", label: "RipTide Studio Blueprint" },
-  { key: KEYS.vicelab, label: "ViceLab runs and hardware" },
-  { key: KEYS.heist, label: "Heist Ops plans" },
-  { key: KEYS.map, label: "Map progress, markers, filters and packs" },
-  { key: KEYS.workspaces, label: "Workspaces" },
-  { key: KEYS.settings, label: "Settings" },
+/** Everything RipTide keeps on this device, by owner, with the schema each part must pass to be restored. */
+const DATA_KEYS: BackupPart[] = [
+  { key: "riptide.blueprint.v1", label: "RipTide Studio Blueprint", schema: Blueprint },
+  { key: KEYS.vicelab, label: "ViceLab runs and hardware", schema: ViceLabState },
+  { key: KEYS.heist, label: "Heist Ops plans", schema: HeistState },
+  { key: KEYS.map, label: "Map progress, markers, filters and packs", schema: MapState },
+  { key: KEYS.workspaces, label: "Workspaces", schema: WorkspacesState },
+  { key: KEYS.settings, label: "Settings", schema: Settings },
 ];
+/** Also in backups, but not offered for reset on their own. */
+const EXTRA_KEYS: BackupPart[] = [
+  { key: KEYS.flags, label: "Interface choice (Tools or classic Studio)", schema: Flags },
+  // Map data from an earlier preview. The map moves it to the current format when it opens.
+  { key: LEGACY_KEYS.map, label: "Map data from an earlier preview", schema: z.record(z.unknown()) },
+];
+const BACKUP_PARTS = [...DATA_KEYS, ...EXTRA_KEYS];
+
+const store = {
+  get: (k: string) => localStorage.getItem(k),
+  set: (k: string, v: string) => localStorage.setItem(k, v),
+  remove: (k: string) => localStorage.removeItem(k),
+};
 
 export function SettingsPage() {
   const { settings, setSettings } = useToolsData();
   const { toast } = useShell();
   const [err, setErr] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [plan, setPlan] = useState<RestorePlan | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   const exportAll = () => {
-    const out: Record<string, unknown> = { format: "riptide-tools-backup", version: 1, exportedAt: new Date().toISOString() };
-    for (const { key } of DATA_KEYS) {
-      try {
-        const v = localStorage.getItem(key);
-        if (v) out[key] = JSON.parse(v);
-      } catch {
-        /* skip unreadable entries */
-      }
-    }
-    downloadText(`riptide-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(out, null, 2));
+    const { file, skipped } = createBackup(BACKUP_PARTS, store);
+    downloadText(`riptide-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(file, null, 2));
+    if (skipped.length) setErr(`Exported, but these couldn't be read on this device and were left out: ${skipped.join(", ")}.`);
   };
 
-  const importAll = async (f: File) => {
+  // Restoring is two steps: check the file and show what will change, then restore on confirm.
+  const checkBackup = async (f: File) => {
     setErr("");
+    setPlan(null);
     try {
-      const data = JSON.parse(await readFileText(f, 40 * 1024 * 1024));
-      if (data?.format !== "riptide-tools-backup") throw new Error();
-      let n = 0;
-      for (const { key } of DATA_KEYS) {
-        if (data[key] === undefined) continue;
-        // Each module validates its own data on load and ignores anything malformed.
-        localStorage.setItem(key, JSON.stringify(data[key]));
-        n++;
-      }
-      toast(`Restored ${n} item${n === 1 ? "" : "s"}. Reloading…`);
-      setTimeout(() => location.reload(), 900);
-    } catch {
-      setErr("This isn't a RipTide backup file, or this device's storage is full.");
+      const p = planRestore(await readFileText(f, BACKUP_MAX_BYTES), BACKUP_PARTS, store);
+      if (!p.ok) setErr(p.error);
+      setPlan(p);
+    } catch (e) {
+      setErr((e as Error).message || "Couldn't read that file.");
     }
+  };
+
+  const restore = () => {
+    if (!plan?.ok) return;
+    const r = applyRestore(plan, store);
+    if (!r.ok) {
+      setErr(r.error);
+      setPlan(null);
+      return;
+    }
+    toast(r.restored ? `Restored ${r.restored} part${r.restored === 1 ? "" : "s"}. Reloading…` : "Nothing to change: this device already matches the backup.");
+    setPlan(null);
+    if (r.restored) setTimeout(() => location.reload(), 900);
   };
 
   const reset = (key: string) => {
@@ -106,9 +122,26 @@ export function SettingsPage() {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "8px 0 16px" }}>
             <button className="rt-btn rt-sm" onClick={exportAll}><LuDownload />Export everything</button>
             <button className="rt-btn rt-sm" onClick={() => input.current?.click()}><LuUpload />Restore a backup</button>
-            <input ref={input} type="file" accept=".json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) importAll(f); e.target.value = ""; }} />
+            <input ref={input} type="file" accept=".json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void checkBackup(f); e.target.value = ""; }} />
           </div>
           {err && <div className="rt-error" role="alert">{err}</div>}
+          {plan && (
+            <div className="rt-restore" role="region" aria-label="Backup check">
+              <b>{plan.ok ? "This backup is valid. Restoring will:" : "Nothing will be changed:"}</b>
+              <ul>
+                {plan.items.map((i) => (
+                  <li key={i.key} data-status={i.status}>
+                    {i.label}: {i.status === "replace" ? "replace what's on this device" : i.status === "same" ? "already the same" : `not valid (${"error" in i ? i.error : ""})`}
+                  </li>
+                ))}
+              </ul>
+              {plan.ok && plan.unknown.length > 0 && <p className="rt-hint">Ignored {plan.unknown.length} part{plan.unknown.length === 1 ? "" : "s"} RipTide doesn't recognise.</p>}
+              <div style={{ display: "flex", gap: 8 }}>
+                {plan.ok && <button className="rt-btn rt-sm rt-primary" onClick={restore}>Restore</button>}
+                <button className="rt-btn rt-sm rt-ghost" onClick={() => setPlan(null)}>{plan.ok ? "Cancel" : "Close"}</button>
+              </div>
+            </div>
+          )}
           {DATA_KEYS.map(({ key, label }) => (
             <SettingRow key={key} title={label}>
               {confirm === key ? (

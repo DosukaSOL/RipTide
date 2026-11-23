@@ -2,7 +2,7 @@
 // Usage: node desktop/test/app.e2e.mjs <path to the unpacked app executable>
 import { _electron as electron } from "playwright";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -18,12 +18,12 @@ const step = async (name, fn) => {
   passed++;
   console.log(`  ✓ ${name}`);
 };
-const launch = async () => {
+const launch = async (ready = ".rt-root") => {
   const app = await electron.launch({ executablePath: exe, args, env });
   const win = await app.firstWindow();
   const errors = [];
   win.on("pageerror", (e) => errors.push(String(e)));
-  await win.waitForSelector(".rt-root", { timeout: 30000 });
+  await win.waitForSelector(ready, { timeout: 30000 });
   return { app, win, errors };
 };
 const go = (win, hash) => win.evaluate((h) => (location.hash = h), hash);
@@ -31,8 +31,20 @@ const go = (win, hash) => win.evaluate((h) => (location.hash = h), hash);
 let { app, win, errors } = await launch();
 
 await step("opens RipTide Tools from app://riptide", async () => {
-  assert.match(win.url(), /^app:\/\/riptide\/index\.html\?shell=tools/);
+  assert.match(win.url(), /^app:\/\/riptide\/index\.html/);
+  assert.equal(await win.locator(".rt-root").count(), 1, "the Tools shell on first start");
   assert.equal(await win.title(), "RipTide Tools");
+});
+
+await step("app:// only serves the app's own files", async () => {
+  const codes = await win.evaluate(async () => {
+    const st = (u) => fetch(u).then((r) => r.status, () => "error");
+    return [await st("app://riptide/index.html"), await st("app://riptide/%2e%2e/package.json"), await st("app://riptide/..%2f..%2fpackage.json"), await st("app://riptide/%E0%A4%A"), await st("app://riptide/nope.js")];
+  });
+  assert.equal(codes[0], 200);
+  assert.ok(codes.slice(1, 3).every((c) => c === 403 || c === 404), `traversal gave ${codes}`);
+  assert.equal(codes[3], 400);
+  assert.equal(codes[4], 404);
 });
 
 await step("the page has no Node access and no internet", async () => {
@@ -114,5 +126,42 @@ await step("a damaged file falls back to its backup", async () => {
   assert.equal(await win.inputValue("#rt-plan-notes"), "Edited on disk");
 });
 assert.deepEqual(errors, []);
+await app.close();
+
+// Valid JSON in the wrong shape (not cut off): the schema check catches it and the backup is used.
+writeFileSync(f, JSON.stringify({ plans: [{ schema: 99 }] }));
+writeFileSync(`${f}.bak`, JSON.stringify({ plans: [{ schema: 1, id: "p1", name: "From backup", description: "", createdAt: 1, updatedAt: 1, roles: [], phases: [], notes: "Recovered from backup" }], activeId: "p1" }));
+({ app, win, errors } = await launch());
+await step("a file in the wrong shape is recovered from its backup, and the app says so", async () => {
+  await go(win, "#/heist");
+  await win.locator("#rt-plan-notes").waitFor();
+  assert.equal(await win.inputValue("#rt-plan-notes"), "Recovered from backup");
+  await win.getByText(/restored the previous version from its backup/).waitFor();
+  await win.waitForTimeout(600);
+  assert.match(readFileSync(f, "utf8"), /Recovered from backup/, "the recovered version is saved");
+});
+await step("switching to the classic Studio is remembered after a restart", async () => {
+  await go(win, "#/settings");
+  await win.getByRole("switch", { name: "RipTide Tools shell" }).click();
+  await win.waitForSelector(".shell .nav", { timeout: 20000 });
+});
+assert.deepEqual(errors, []);
+await app.close();
+
+// Delete the heist file while the app is closed: it must stay deleted, not come back from the
+// browser engine's copy.
+rmSync(f, { force: true });
+rmSync(`${f}.bak`, { force: true });
+({ app, win, errors } = await launch(".shell .nav, .rt-root"));
+await step("the shell choice survived the restart", async () => {
+  assert.equal(await win.locator(".shell .nav").count(), 1, "opened in the classic Studio");
+});
+await step("a data file deleted outside the app stays deleted", async () => {
+  await win.evaluate(() => (location.href = "index.html?shell=tools#/heist"));
+  await win.waitForSelector(".rt-root", { timeout: 20000 });
+  await win.getByRole("button", { name: "Create plan" }).waitFor();
+  await win.waitForTimeout(600);
+  assert.equal(existsSync(f), false, "not written back");
+});
 await app.close();
 console.log(`\n${passed} desktop checks passed (data in ${dataDir})`);

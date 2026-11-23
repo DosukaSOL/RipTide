@@ -5,7 +5,7 @@ import { PageHeader, SettingRow, Switch, useShell } from "../ui";
 import { HeaderRight } from "./common";
 import { useToolsData } from "../data";
 import { useOpenWindowsList } from "../ToolsApp";
-import { DETACHABLE, detectScreens, dockTool, focusTool, openToolWindow } from "../windows";
+import { DETACHABLE, detectScreens, dockTool, focusTool, openToolWindow, openToolWindows } from "../windows";
 import { moduleById } from "../registry";
 
 /** Offered on Home and Workspaces when a saved layout has windows that aren't open. */
@@ -30,9 +30,10 @@ export function RestoreBanner() {
       <button
         className="rt-btn rt-sm"
         onClick={async () => {
-          for (const m of missing) {
-            const r = await openToolWindow(m.tool, m.geometry);
-            if (!r.ok) return toast("Your browser blocked the window. Allow pop-ups for RipTide and try again.");
+          const { blocked } = await openToolWindows(missing.map((m) => ({ tool: m.tool, geometry: m.geometry })));
+          if (blocked.length) {
+            const which = blocked.map((t) => moduleById(t).label).join(" and ");
+            toast(`Your browser blocked ${which}. Allow pop-ups for RipTide, or use Pop out in Workspaces to open ${blocked.length > 1 ? "them" : "it"} one at a time.`);
           }
         }}
       >

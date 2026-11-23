@@ -8,6 +8,7 @@ const path = require("node:path");
 const storage = require("./storage.cjs");
 const updates = require("./updates.cjs");
 const updater = require("./updater.cjs");
+const { resolveAppFile } = require("./appfiles.cjs");
 
 const ORIGIN = "app://riptide";
 const APP_DIR = path.join(__dirname, "app");
@@ -104,7 +105,8 @@ function createMain() {
   main.once("ready-to-show", () => main.show());
   main.on("close", () => saveBounds(main));
   main.on("closed", () => (main = null));
-  void main.loadURL(`${ORIGIN}/index.html?shell=tools`);
+  // No ?shell= here: the app opens in the shell you last picked (Tools the first time).
+  void main.loadURL(`${ORIGIN}/index.html`);
 }
 
 /* ---------- menu ---------- */
@@ -133,6 +135,9 @@ function buildMenu() {
 /* ---------- storage IPC (sync, so writes are on disk before the call returns) ---------- */
 ipcMain.on("rt:readAll", (e) => {
   e.returnValue = fromApp(e) ? storage.readAll(dataDir) : {};
+});
+ipcMain.on("rt:readBackup", (e, key) => {
+  e.returnValue = fromApp(e) ? storage.readBackup(dataDir, key) : null;
 });
 ipcMain.on("rt:write", (e, key, value) => {
   e.returnValue = fromApp(e) && storage.isKey(key) && (value === null || typeof value === "string") ? storage.writeKey(dataDir, key, value) : false;
@@ -177,14 +182,11 @@ app.whenReady().then(() => {
   dataDir = chooseDataDir();
 
   protocol.handle("app", async (req) => {
-    const u = new URL(req.url);
-    if (u.host !== "riptide") return new Response("Not found", { status: 404 });
-    const rel = decodeURIComponent(u.pathname).replace(/^\/+/, "") || "index.html";
-    const file = path.normalize(path.join(APP_DIR, rel));
-    if (!file.startsWith(APP_DIR + path.sep)) return new Response("Forbidden", { status: 403 });
+    const r = await resolveAppFile(APP_DIR, req.url);
+    if (r.status !== 200) return new Response(r.status === 403 ? "Forbidden" : r.status === 400 ? "Bad request" : "Not found", { status: r.status });
     try {
-      const body = await fs.promises.readFile(file);
-      return new Response(body, { headers: { "content-type": MIME[path.extname(file).toLowerCase()] ?? "application/octet-stream", "x-content-type-options": "nosniff" } });
+      const body = await fs.promises.readFile(r.file);
+      return new Response(body, { headers: { "content-type": MIME[path.extname(r.file).toLowerCase()] ?? "application/octet-stream", "x-content-type-options": "nosniff" } });
     } catch {
       return new Response("Not found", { status: 404 });
     }

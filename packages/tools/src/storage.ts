@@ -51,7 +51,13 @@ export const Run = z.object({
   source: z.string().max(20),
   fileName: z.string().max(200).default(""),
   createdAt: z.number(),
+  /** What the stats measure: presented frames (most captures) or displayed frames. */
+  metric: z.enum(["presented", "displayed"]).default("presented"),
   stats: Stats,
+  /** Displayed-frame FPS, when the capture recorded it next to presented frames. */
+  displayed: z.object({ avgFps: z.number(), low1Fps: z.number() }).optional(),
+  /** Notes from reading the capture (other processes left out, several runs in one file…). */
+  notes: z.array(z.string().max(300)).max(10).default([]),
   /** Downsampled series for charting; the full capture is not stored. */
   series: z.array(z.tuple([z.number(), z.number(), z.number()])).max(1500),
 });
@@ -161,6 +167,22 @@ export const WorkspacesState = z.object({
   list: z.array(Workspace).min(1).max(20).default([{ id: "default", name: "Default", preset: "single", detached: [], restoreOnStartup: true, keepIndependent: true, rememberPositions: true, savedAt: 0 }]),
 });
 export type WorkspacesState = z.infer<typeof WorkspacesState>;
+
+/**
+ * Like readStored, but says what happened: "empty" (nothing stored), "ok", or "invalid"
+ * (something is stored but it isn't valid JSON or doesn't match the schema). Callers use
+ * "invalid" to try a backup before falling back to defaults, so good data is never replaced
+ * by an empty default without anyone knowing.
+ */
+export function parseStored<T>(raw: string | null, schema: z.ZodType<T, z.ZodTypeDef, unknown>): { status: "empty" } | { status: "ok"; value: T } | { status: "invalid" } {
+  if (raw === null || raw === "") return { status: "empty" };
+  try {
+    const r = schema.safeParse(JSON.parse(raw));
+    return r.success ? { status: "ok", value: r.data } : { status: "invalid" };
+  } catch {
+    return { status: "invalid" };
+  }
+}
 
 /** Parse stored JSON with a schema; never throws. */
 export function readStored<T>(raw: string | null, schema: z.ZodType<T, z.ZodTypeDef, unknown>, fallback: T): T {

@@ -1,38 +1,86 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { z } from "zod";
-import { readStored } from "@riptide/tools";
+import { jsonEqual, merge3, parseStored } from "@riptide/tools";
+import { desktopBridge } from "../desktop";
+
+type Loaded<T> = { value: T; notice: string; repair: boolean };
+
+/**
+ * Read a tool's saved data. If it's damaged, try the desktop app's backup copy before falling
+ * back to defaults, and say which happened, so good data is never silently replaced.
+ */
+function load<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, fallback: () => T): Loaded<T> {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(key);
+  } catch {
+    return { value: fallback(), notice: "", repair: false };
+  }
+  const main = parseStored(raw, schema);
+  if (main.status === "ok") return { value: main.value, notice: "", repair: false };
+  if (main.status === "empty") return { value: fallback(), notice: "", repair: false };
+  let backup: string | null = null;
+  try {
+    backup = desktopBridge()?.readBackup?.(key) ?? null;
+  } catch {
+    backup = null;
+  }
+  const bak = parseStored(backup, schema);
+  if (bak.status === "ok") {
+    return { value: bak.value, notice: "Your latest save was damaged, so RipTide restored the previous version from its backup.", repair: true };
+  }
+  // Keep the unreadable copy so nothing is lost, then start from defaults.
+  try {
+    if (raw !== null && localStorage.getItem(`${key}.unreadable`) === null) localStorage.setItem(`${key}.unreadable`, raw);
+  } catch {
+    /* storage full: the original stays in place until something new is saved */
+  }
+  return { value: fallback(), notice: "Your saved data for this tool couldn't be read, so it started fresh. The unreadable copy is kept alongside it.", repair: false };
+}
 
 /**
  * Module-level persistence. Each tool owns one key in localStorage.
  * - Stored data is validated on read and on every cross-window update.
- * - Changes from other windows (a popped-out map, say) arrive through the
- *   storage event, so every window shows the same state.
+ * - Two windows can edit the same tool: changes from the other window are merged with this
+ *   window's unsaved changes (see merge3) instead of one overwriting the other.
  * - If storage is full or blocked, the app keeps working in memory and says so.
  */
 export function usePersisted<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, fallback: () => T) {
-  const [state, setState] = useState<T>(() => {
-    try {
-      return readStored(localStorage.getItem(key), schema, fallback());
-    } catch {
-      return fallback();
-    }
-  });
-  const [error, setError] = useState("");
+  const [initial] = useState(() => load(key, schema, fallback));
+  const [state, setState] = useState<T>(initial.value);
+  const [error, setError] = useState(initial.notice);
   const external = useRef(false);
-  const first = useRef(true);
+  const first = useRef(!initial.repair); // a repaired value is saved straight away
+  /** The last version this window and storage agreed on: the base for merges. */
+  const base = useRef<T>(initial.value);
   /** State waiting to be written, so it can be saved at once if the page closes. */
   const pending = useRef<T | null>(null);
 
   const write = useCallback(
     (value: T) => {
+      let out = value;
       try {
-        localStorage.setItem(key, JSON.stringify(value));
+        // Another window may have saved since this one last synced, before its storage event
+        // arrived here. Merge with what's stored now instead of overwriting it.
+        const now = parseStored(localStorage.getItem(key), schema);
+        if (now.status === "ok" && !jsonEqual(now.value, base.current)) {
+          const merged = schema.safeParse(merge3(base.current, value, now.value));
+          if (merged.success) {
+            out = merged.data;
+            if (!jsonEqual(out, value)) {
+              external.current = true;
+              setState(out);
+            }
+          }
+        }
+        localStorage.setItem(key, JSON.stringify(out));
+        base.current = out;
         setError("");
       } catch {
         setError("This device's storage is full or blocked, so recent changes are only kept until you close RipTide. Export your data to keep it.");
       }
     },
-    [key],
+    [key, schema],
   );
 
   useEffect(() => {
@@ -72,10 +120,24 @@ export function usePersisted<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, 
 
   useEffect(() => {
     const on = (e: StorageEvent) => {
-      if (e.key !== key) return;
+      if (e.key !== key && e.key !== null) return;
+      const remote = parseStored(e.key === null ? null : e.newValue, schema);
+      if (remote.status === "invalid") return; // never adopt damaged data from elsewhere
+      const theirs = remote.status === "ok" ? remote.value : fallback(); // empty: reset in another window
+      const mine = pending.current;
+      if (mine !== null && remote.status === "ok") {
+        // Unsaved changes here: merge them with the other window's save, then save the result.
+        const merged = schema.safeParse(merge3(base.current, mine, theirs));
+        base.current = theirs;
+        if (merged.success && !jsonEqual(merged.data, theirs)) {
+          setState(merged.data); // the effect saves it
+          return;
+        }
+      }
+      base.current = theirs;
+      pending.current = null;
       external.current = true;
-      pending.current = null; // the other window's newer state wins
-      setState(readStored(e.newValue, schema, fallback()));
+      setState(theirs);
     };
     window.addEventListener("storage", on);
     return () => window.removeEventListener("storage", on);

@@ -20,8 +20,13 @@ function isJson(text) {
   }
 }
 
-/** Read one key: the main file if it's valid JSON, otherwise its backup. */
+/**
+ * Read one key: the main file if it's valid JSON, otherwise its backup. If the main file is gone,
+ * the key was deleted (saves replace the file in one step, so it's never missing mid-save), and
+ * the backup isn't used to bring it back.
+ */
 function readKey(dir, key) {
+  if (!fs.existsSync(fileFor(dir, key))) return null;
   for (const f of [fileFor(dir, key), `${fileFor(dir, key)}.bak`]) {
     try {
       const st = fs.statSync(f);
@@ -33,6 +38,20 @@ function readKey(dir, key) {
     }
   }
   return null;
+}
+
+/** The backup copy of one key (the version before the last save), if it's valid JSON. */
+function readBackup(dir, key) {
+  if (!isKey(key)) return null;
+  const f = `${fileFor(dir, key)}.bak`;
+  try {
+    const st = fs.statSync(f);
+    if (!st.isFile() || st.size > MAX_BYTES) return null;
+    const text = fs.readFileSync(f, "utf8");
+    return isJson(text) ? text : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Every valid key in the folder. */
@@ -76,8 +95,10 @@ function writeKey(dir, key, value) {
       fs.closeSync(fd);
     }
     if (fs.existsSync(f)) {
-      // Keep the last good version as a backup before replacing it.
-      if (fs.readFileSync(f, "utf8") !== value) fs.copyFileSync(f, `${f}.bak`);
+      // Keep the previous version as a backup before replacing it, but only if it's readable:
+      // a damaged file must never replace a good backup.
+      const prev = fs.readFileSync(f, "utf8");
+      if (prev !== value && isJson(prev)) fs.copyFileSync(f, `${f}.bak`);
     }
     fs.renameSync(tmp, f);
     return true;
@@ -99,4 +120,4 @@ function writable(dir) {
   }
 }
 
-module.exports = { isKey, readKey, readAll, writeKey, writable, MAX_BYTES };
+module.exports = { isKey, readKey, readBackup, readAll, writeKey, writable, MAX_BYTES };

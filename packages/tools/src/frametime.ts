@@ -9,11 +9,28 @@
 
 export type CaptureSource = "presentmon" | "capframex" | "mangohud" | "plain";
 
+/**
+ * What the frame times measure.
+ * - presented: time between the game handing frames to the display pipeline (PresentMon's
+ *   MsBetweenPresents, MangoHud's frametime). This is what most tools call "FPS".
+ * - displayed: time between frames actually changing on screen (MsBetweenDisplayChange). It
+ *   includes frame generation and leaves out frames that never reached the screen.
+ */
+export type FrameMetric = "presented" | "displayed";
+
 export interface ParsedCapture {
   source: CaptureSource;
+  /** Frame times for `metric`. */
   frametimesMs: number[];
+  metric: FrameMetric;
+  /** Displayed frame times, when the capture also records them next to presented ones. */
+  displayedMs?: number[];
   /** Rows that were skipped because they weren't valid frame times. */
   skipped: number;
+  /** Rows left out because they came from another process or swap chain. */
+  filtered: number;
+  /** Plain-language notes about choices made while reading the file. */
+  notes: string[];
 }
 
 export interface FrameStats {
@@ -42,7 +59,9 @@ export const LIMITS = {
 
 export class CaptureError extends Error {}
 
-const FRAME_COLUMNS = ["msbetweenpresents", "frametime", "frametime_ms", "frametimems", "ms", "msbetweendisplaychange"];
+/** Presented frame-time columns, most specific first. */
+const PRESENT_COLUMNS = ["msbetweenpresents", "frametime", "frametime_ms", "frametimems", "ms"];
+const DISPLAY_COLUMN = "msbetweendisplaychange";
 
 function splitLine(line: string, delim: string): string[] {
   if (!line.includes('"')) return line.split(delim);
@@ -71,6 +90,10 @@ function validFrame(n: number) {
   return Number.isFinite(n) && n > 0 && n <= LIMITS.maxFrameMs;
 }
 
+const cell = (cells: string[], i: number) => (i < 0 ? "" : (cells[i] ?? "").trim().replace(/^"|"$/g, ""));
+/** Numbers written with a decimal comma (European locales, ";" separated files) are read too. */
+const num = (s: string, delim: string) => Number(delim === ";" ? s.replace(",", ".") : s);
+
 function parseCsv(text: string): ParsedCapture {
   const lines = text.split(/\r?\n/);
   // Find the header: the first line that names a frame-time column. MangoHud puts
@@ -79,25 +102,66 @@ function parseCsv(text: string): ParsedCapture {
     const line = lines[h]!;
     const delim = line.includes(";") && !line.includes(",") ? ";" : line.includes("\t") && !line.includes(",") ? "\t" : ",";
     const cols = splitLine(line, delim).map(norm);
-    // Prefer the most specific column when several exist.
-    let idx = -1;
-    for (const want of FRAME_COLUMNS) {
-      idx = cols.indexOf(want);
-      if (idx >= 0) break;
+    let present = -1;
+    for (const want of PRESENT_COLUMNS) {
+      present = cols.indexOf(want);
+      if (present >= 0) break;
     }
-    if (idx < 0) continue;
-    const source: CaptureSource = cols.includes("msbetweenpresents") ? "presentmon" : cols.includes("fps") && cols.includes("frametime") ? "mangohud" : "presentmon";
-    const out: number[] = [];
-    let skipped = 0;
+    const display = cols.indexOf(DISPLAY_COLUMN);
+    if (present < 0 && display < 0) continue;
+    const source: CaptureSource = cols.includes("msbetweenpresents") || display >= 0 ? "presentmon" : cols.includes("fps") && cols.includes("frametime") ? "mangohud" : "presentmon";
+    const notes: string[] = [];
+
+    // PresentMon can record several processes or swap chains in one file (an overlay, a
+    // launcher, a second window). Mixing them would double or halve the frame rate, so only
+    // the one with the most frames is used.
+    const app = cols.indexOf("application");
+    const pid = cols.indexOf("processid");
+    const swap = cols.indexOf("swapchainaddress");
+    const rows: string[][] = [];
     for (let i = h + 1; i < lines.length; i++) {
       const l = lines[i]!;
-      if (!l.trim()) continue;
-      const v = Number(splitLine(l, delim)[idx]?.trim().replace(/^"|"$/g, ""));
+      if (l.trim()) rows.push(splitLine(l, delim));
+      if (rows.length > LIMITS.maxFrames + 1000) throw new CaptureError("This capture has more than 2 million frames. Trim it and try again.");
+    }
+    let keep: string | null = null;
+    let filtered = 0;
+    const keyOf = (r: string[]) => `${cell(r, pid)}|${cell(r, swap)}`;
+    if (pid >= 0 || swap >= 0) {
+      const counts = new Map<string, number>();
+      for (const r of rows) counts.set(keyOf(r), (counts.get(keyOf(r)) ?? 0) + 1);
+      if (counts.size > 1) {
+        keep = [...counts].sort((a, b) => b[1] - a[1])[0]![0];
+        filtered = rows.length - counts.get(keep)!;
+        const sample = rows.find((r) => keyOf(r) === keep);
+        const name = sample ? cell(sample, app) : "";
+        notes.push(`This capture has frames from ${counts.size} processes or swap chains. RipTide used the one with the most frames${name ? ` (${name})` : ""} and left out ${filtered} rows from the others.`);
+      }
+    }
+
+    const out: number[] = [];
+    const shown: number[] = [];
+    let skipped = 0;
+    let notShown = 0;
+    const primary = present >= 0 ? present : display;
+    for (const r of rows) {
+      if (keep !== null && keyOf(r) !== keep) continue;
+      const v = num(cell(r, primary), delim);
       if (validFrame(v)) out.push(v);
       else skipped++;
+      if (present >= 0 && display >= 0) {
+        const d = num(cell(r, display), delim);
+        if (validFrame(d)) shown.push(d);
+        else if (d === 0) notShown++; // presented but never reached the screen
+      }
       if (out.length > LIMITS.maxFrames) throw new CaptureError("This capture has more than 2 million frames. Trim it and try again.");
     }
-    return { source, frametimesMs: out, skipped };
+    const metric: FrameMetric = present >= 0 ? "presented" : "displayed";
+    if (metric === "displayed") notes.push("This capture only has displayed frame times (MsBetweenDisplayChange), so the FPS shown is what reached the screen.");
+    if (notShown) notes.push(`${notShown} presented frames never reached the screen.`);
+    const result: ParsedCapture = { source, frametimesMs: out, metric, skipped, filtered, notes };
+    if (shown.length >= LIMITS.minFrames) result.displayedMs = shown;
+    return result;
   }
   return parsePlain(text);
 }
@@ -113,7 +177,7 @@ function parsePlain(text: string): ParsedCapture {
     else skipped++;
     if (out.length > LIMITS.maxFrames) throw new CaptureError("This capture has more than 2 million frames. Trim it and try again.");
   }
-  return { source: "plain", frametimesMs: out, skipped };
+  return { source: "plain", frametimesMs: out, metric: "presented", skipped, filtered: 0, notes: [] };
 }
 
 function parseJson(text: string): ParsedCapture {
@@ -125,19 +189,28 @@ function parseJson(text: string): ParsedCapture {
   }
   const runs = (data as { Runs?: unknown })?.Runs;
   if (Array.isArray(runs)) {
-    const out: number[] = [];
-    let skipped = 0;
-    for (const run of runs) {
-      const arr = (run as { CaptureData?: { MsBetweenPresents?: unknown } })?.CaptureData?.MsBetweenPresents;
-      if (!Array.isArray(arr)) continue;
-      for (const v of arr) {
+    // Separate runs are separate measurements (often different scenes). They're never joined:
+    // the first run with frame times is used, and the note says so.
+    const usable = runs.filter((run) => Array.isArray((run as { CaptureData?: { MsBetweenPresents?: unknown } })?.CaptureData?.MsBetweenPresents));
+    const first = usable[0] as { CaptureData: { MsBetweenPresents: unknown[]; MsBetweenDisplayChange?: unknown } } | undefined;
+    if (first) {
+      const out: number[] = [];
+      let skipped = 0;
+      for (const v of first.CaptureData.MsBetweenPresents) {
         const n = Number(v);
         if (validFrame(n)) out.push(n);
         else skipped++;
         if (out.length > LIMITS.maxFrames) throw new CaptureError("This capture has more than 2 million frames. Trim it and try again.");
       }
+      const notes = usable.length > 1 ? [`This file has ${usable.length} runs. RipTide imported the first one; import the others separately so they aren't mixed.`] : [];
+      const result: ParsedCapture = { source: "capframex", frametimesMs: out, metric: "presented", skipped, filtered: 0, notes };
+      const disp = first.CaptureData.MsBetweenDisplayChange;
+      if (Array.isArray(disp)) {
+        const shown = disp.map(Number).filter(validFrame);
+        if (shown.length >= LIMITS.minFrames) result.displayedMs = shown;
+      }
+      if (out.length) return result;
     }
-    if (out.length) return { source: "capframex", frametimesMs: out, skipped };
   }
   throw new CaptureError("RipTide couldn't find frame times in this JSON. CapFrameX captures are supported.");
 }
@@ -223,32 +296,68 @@ export interface RunSummary {
   game: string;
   preset: string;
   stats: Pick<FrameStats, "avgFps" | "low1Fps">;
+  /** The hardware profile the run was made on. Runs on different hardware are never compared. */
+  hardwareId?: string;
+  /** The test scene. Runs of different scenes are never compared. */
+  scene?: string;
+  /** Screen resolution, from the hardware profile. */
+  resolution?: string;
+  metric?: FrameMetric;
 }
 
 export interface Recommendation {
   run: RunSummary;
   reason: string;
+  /** "low" when the runs can't be confirmed comparable, or each preset was measured once. */
+  confidence: "low" | "ok";
+  /** Why confidence is low, in plain language. */
+  caveats: string[];
+  /** Runs of this game left out because they were made on other hardware, scenes or resolutions. */
+  excluded: number;
+  /** The runs that were compared. */
+  compared: string[];
+}
+
+/** Runs are only comparable when the hardware, scene, resolution and frame metric match. */
+export function comparisonKey(r: RunSummary): string {
+  return [r.hardwareId ?? "", (r.scene ?? "").trim().toLowerCase(), (r.resolution ?? "").trim().toLowerCase(), r.metric ?? "presented"].join("|");
 }
 
 /**
- * Pick the best of the user's runs for a game. Only ever chooses between real
- * measurements; returns null when there isn't enough to compare.
+ * Pick the best of the user's runs for a game. Only ever chooses between real measurements that
+ * can be compared: same hardware profile, scene, resolution and frame metric. A 1080p run is
+ * never recommended against a 4K one. Returns null when no comparable set has two presets.
  */
 export function recommend(runs: RunSummary[], game: string, priority: Priority, targetFps = 60): Recommendation | null {
-  const pool = runs.filter((r) => r.game === game && PRESET_RANK[r.preset] !== undefined);
-  if (pool.length < 2) return null;
+  const all = runs.filter((r) => r.game === game && PRESET_RANK[r.preset] !== undefined);
+  const groups = new Map<string, RunSummary[]>();
+  for (const r of all) groups.set(comparisonKey(r), [...(groups.get(comparisonKey(r)) ?? []), r]);
+  // The comparable set with the most presets measured, then the most runs.
+  const presetsIn = (g: RunSummary[]) => new Set(g.map((r) => r.preset)).size;
+  const best = [...groups.values()].filter((g) => presetsIn(g) >= 2).sort((a, b) => presetsIn(b) - presetsIn(a) || b.length - a.length)[0];
+  if (!best) return null;
+  const pool = best;
+  const caveats: string[] = [];
+  const sample = pool[0]!;
+  if (!sample.hardwareId) caveats.push("These runs have no hardware profile, so RipTide can't confirm they were made on the same PC.");
+  if (!sample.scene?.trim()) caveats.push("These runs don't name a test scene, so RipTide can't confirm they tested the same place.");
+  const perPreset = new Map<string, number>();
+  pool.forEach((r) => perPreset.set(r.preset, (perPreset.get(r.preset) ?? 0) + 1));
+  if ([...perPreset.values()].some((n) => n < 2)) caveats.push("Some presets were measured only once. Repeat each run to rule out a one-off.");
+  const base = { confidence: caveats.length ? ("low" as const) : ("ok" as const), caveats, excluded: all.length - pool.length, compared: pool.map((r) => r.id) };
+
   const rank = (r: RunSummary) => PRESET_RANK[r.preset]!;
   if (priority === "performance") {
-    const best = [...pool].sort((a, b) => b.stats.low1Fps - a.stats.low1Fps)[0]!;
-    return { run: best, reason: `Smoothest of your runs: ${best.stats.low1Fps} FPS in the slowest 1% of frames.` };
+    const top = [...pool].sort((a, b) => b.stats.low1Fps - a.stats.low1Fps)[0]!;
+    return { run: top, reason: `Smoothest of your comparable runs: ${top.stats.low1Fps} FPS in the slowest 1% of frames.`, ...base };
   }
   const floor = priority === "quality" ? targetFps * 0.75 : targetFps;
   const lowFloor = priority === "quality" ? targetFps * 0.5 : targetFps * 0.75;
   const ok = pool.filter((r) => r.stats.avgFps >= floor && r.stats.low1Fps >= lowFloor);
   if (!ok.length) {
-    const best = [...pool].sort((a, b) => b.stats.avgFps - a.stats.avgFps)[0]!;
-    return { run: best, reason: `None of your runs reached ${floor} FPS on average. This one came closest.` };
+    const top = [...pool].sort((a, b) => b.stats.avgFps - a.stats.avgFps)[0]!;
+    return { run: top, reason: `None of your comparable runs reached ${floor} FPS on average. This one came closest.`, ...base };
   }
-  const best = [...ok].sort((a, b) => rank(b) - rank(a) || b.stats.avgFps - a.stats.avgFps)[0]!;
-  return { run: best, reason: `Highest preset that kept ${Math.round(floor)}+ FPS on average with steady lows.` };
+  const top = [...ok].sort((a, b) => rank(b) - rank(a) || b.stats.avgFps - a.stats.avgFps)[0]!;
+  return { run: top, reason: `Highest preset that kept ${Math.round(floor)}+ FPS on average with steady lows.`, ...base };
 }

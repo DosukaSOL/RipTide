@@ -96,28 +96,57 @@ export async function detectScreens(ask: boolean): Promise<{ screens: Rect[]; de
 
 /**
  * Open a tool in its own window. Must be called from a click or key press.
- * Places it on another display when the browser allows; restores saved geometry otherwise.
+ *
+ * The window is opened straight away, before anything is awaited: browsers only allow pop-ups
+ * during the click that asked for them, and asking for display details first could let that
+ * moment pass and get the window blocked. It opens on the current display (or its saved spot),
+ * then moves to another display once the browser says where they are.
  */
-export async function openToolWindow(tool: ToolId, saved?: Rect): Promise<{ ok: boolean; geometry?: Rect }> {
-  if (!DETACHABLE.includes(tool)) return { ok: false };
+export function openToolWindow(tool: ToolId, saved?: Rect): Promise<{ ok: boolean; geometry?: Rect }> {
+  if (!DETACHABLE.includes(tool)) return Promise.resolve({ ok: false });
   const existing = handles.get(tool);
   if (existing && !existing.closed) {
     existing.focus();
-    return { ok: true };
+    return Promise.resolve({ ok: true });
   }
-  const { screens } = await detectScreens(true);
+  const s = window.screen as Screen & { availLeft?: number; availTop?: number };
+  const here: Rect[] = [{ x: s.availLeft ?? 0, y: s.availTop ?? 0, w: s.availWidth, h: s.availHeight }];
   const current: Rect = { x: window.screenX, y: window.screenY, w: window.outerWidth, h: window.outerHeight };
-  const g = saved ? clampToScreens(saved, screens) : suggestPlacement(current, screens);
+  const first = saved ? clampToScreens(saved, here) : suggestPlacement(current, here);
   const url = `${location.pathname}?window=${encodeURIComponent(tool)}${location.search.includes("splash=0") ? "&splash=0" : ""}`;
-  const win = window.open(url, `riptide-${tool}`, `popup=yes,width=${g.w},height=${g.h},left=${g.x},top=${g.y}`);
-  if (!win) return { ok: false };
+  const win = window.open(url, `riptide-${tool}`, `popup=yes,width=${first.w},height=${first.h},left=${first.x},top=${first.y}`);
+  if (!win) return Promise.resolve({ ok: false });
   try {
     win.opener = null;
   } catch {
     /* ignore */
   }
   handles.set(tool, win);
-  return { ok: true, geometry: g };
+  // Now place it properly, if the browser shares other displays.
+  return detectScreens(true).then(({ screens, detailed }) => {
+    if (!detailed) return { ok: true, geometry: first };
+    const g = saved ? clampToScreens(saved, screens) : suggestPlacement(current, screens);
+    if (g.x !== first.x || g.y !== first.y || g.w !== first.w || g.h !== first.h) {
+      try {
+        win.moveTo(g.x, g.y);
+        win.resizeTo(g.w, g.h);
+      } catch {
+        /* the browser didn't allow moving it: it stays on this display */
+      }
+    }
+    return { ok: true, geometry: g };
+  });
+}
+
+/**
+ * Open several tools from one click. All windows are opened before anything is awaited, so the
+ * browser sees them as part of the click. Returns the tools the browser blocked.
+ */
+export async function openToolWindows(list: { tool: ToolId; geometry?: Rect }[]): Promise<{ blocked: ToolId[] }> {
+  const pending = list.map((m) => ({ tool: m.tool, p: openToolWindow(m.tool, m.geometry) }));
+  const blocked: ToolId[] = [];
+  for (const { tool, p } of pending) if (!(await p).ok) blocked.push(tool);
+  return { blocked };
 }
 
 export function dockTool(tool: ToolId) {

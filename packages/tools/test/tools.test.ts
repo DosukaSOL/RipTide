@@ -77,7 +77,9 @@ test("CapFrameX JSON", () => {
   const json = JSON.stringify({ Info: {}, Runs: [{ CaptureData: { MsBetweenPresents: frames(50) } }, { CaptureData: { MsBetweenPresents: frames(50, 20) } }] });
   const r = parseCapture(json, "run.json");
   assert.equal(r.source, "capframex");
-  assert.equal(r.frametimesMs.length, 100);
+  // Two runs are two measurements: only the first is imported, never both joined together.
+  assert.equal(r.frametimesMs.length, 50);
+  assert.ok(r.notes.some((n) => /2 runs/.test(n)));
 });
 
 test("plain list, semicolon CSV and junk rows", () => {
@@ -363,4 +365,245 @@ test("ids are random and url-safe", () => {
 test("every roadmap item is gated", () => {
   assert.ok(ROADMAP.length >= 12);
   assert.ok(ROADMAP.every((r) => r.gates.length > 0));
+});
+
+/* ---------- audit fixes: merging edits from two windows ---------- */
+import { merge3, jsonEqual } from "../src/merge";
+import { applyRestore, checksum, createBackup, planRestore, BACKUP_FORMAT } from "../src/backup";
+import { HeistState as HeistStateSchema, MapState as MapStateSchema, Settings as SettingsSchema, KEYS as K, parseStored } from "../src/storage";
+
+test("merge: edits to different fields in two windows both survive", () => {
+  const base = { a: 1, b: { c: 1, d: 1 }, list: ["x"] };
+  const local = { a: 2, b: { c: 1, d: 1 }, list: ["x", "y"] };
+  const remote = { a: 1, b: { c: 1, d: 5 }, list: ["x", "z"] };
+  assert.deepEqual(merge3(base, local, remote), { a: 2, b: { c: 1, d: 5 }, list: ["x", "z", "y"] });
+});
+
+test("merge: records with ids merge record by record", () => {
+  const base = { plans: [{ id: "p1", name: "A", notes: "" }, { id: "p2", name: "B", notes: "" }] };
+  const local = { plans: [{ id: "p1", name: "A renamed", notes: "" }, { id: "p2", name: "B", notes: "" }, { id: "p3", name: "New here", notes: "" }] };
+  const remote = { plans: [{ id: "p1", name: "A", notes: "theirs" }, { id: "p4", name: "New there", notes: "" }] }; // p2 deleted there
+  const out = merge3(base, local, remote);
+  assert.deepEqual(out.plans.map((p) => p.id), ["p1", "p4", "p3"]);
+  assert.deepEqual(out.plans[0], { id: "p1", name: "A renamed", notes: "theirs" });
+});
+
+test("merge: a deleted record stays deleted unless the other window edited it", () => {
+  const base = { l: [{ id: "a", v: 1 }] };
+  assert.deepEqual(merge3(base, { l: [] }, { l: [{ id: "a", v: 1 }] }), { l: [] });
+  assert.deepEqual(merge3(base, { l: [] }, { l: [{ id: "a", v: 2 }] }), { l: [{ id: "a", v: 2 }] });
+});
+
+test("merge: sets of ids apply additions and removals from both windows", () => {
+  assert.deepEqual(merge3(["a", "b"], ["a", "c"], ["a", "b", "d"]), ["a", "d", "c"]);
+});
+
+test("merge: the same field changed in both windows takes this window's edit, deterministically", () => {
+  assert.deepEqual(merge3({ name: "x" }, { name: "mine" }, { name: "theirs" }), { name: "mine" });
+  assert.deepEqual(merge3({ name: "x" }, { name: "theirs" }, { name: "mine" }), { name: "theirs" });
+});
+
+test("merge: 200 interleaved edits from two windows keep every unrelated change", () => {
+  // Simulates two windows each saving a burst of edits while the other's storage event is in flight.
+  let stored = { plans: [] as { id: string; done: string[]; name: string }[] };
+  let baseA = structuredClone(stored);
+  let baseB = structuredClone(stored);
+  let a = structuredClone(stored);
+  let b = structuredClone(stored);
+  const save = (win: "A" | "B") => {
+    const [mine, base] = win === "A" ? [a, baseA] : [b, baseB];
+    const merged = merge3(base, mine, stored);
+    stored = merged;
+    if (win === "A") { a = structuredClone(merged); baseA = structuredClone(merged); } else { b = structuredClone(merged); baseB = structuredClone(merged); }
+  };
+  for (let i = 0; i < 100; i++) {
+    a.plans.push({ id: `a${i}`, done: [], name: `A ${i}` });
+    if (i % 3 === 0 && b.plans.length) b.plans[0]!.done.push(`b-step-${i}`);
+    b.plans.push({ id: `b${i}`, done: [], name: `B ${i}` });
+    if (i % 2 === 0) save("A");
+    if (i % 5 === 0) save("B");
+  }
+  save("A");
+  save("B");
+  save("A");
+  const ids = new Set(stored.plans.map((p) => p.id));
+  for (let i = 0; i < 100; i++) {
+    assert.ok(ids.has(`a${i}`), `a${i}`);
+    assert.ok(ids.has(`b${i}`), `b${i}`);
+  }
+  assert.ok(jsonEqual(a, stored) && jsonEqual(b, stored) || jsonEqual(a, stored));
+});
+
+test("merge results still pass the tools' schemas", () => {
+  const base = HeistStateSchema.parse({});
+  const local = HeistStateSchema.parse({ activeId: "x" });
+  const remote = HeistStateSchema.parse({ plans: [] });
+  assert.equal(HeistStateSchema.safeParse(merge3(base, local, remote)).success, true);
+});
+
+test("parseStored tells empty, valid and damaged apart", () => {
+  assert.deepEqual(parseStored(null, SettingsSchema), { status: "empty" });
+  assert.equal(parseStored('{"motion":"full"}', SettingsSchema).status, "ok");
+  assert.deepEqual(parseStored("{cut", SettingsSchema), { status: "invalid" });
+  assert.deepEqual(parseStored('{"motion":"sideways"}', SettingsSchema), { status: "invalid" });
+});
+
+/* ---------- audit fixes: backups ---------- */
+const parts = [
+  { key: K.settings, label: "Settings", schema: SettingsSchema },
+  { key: K.heist, label: "Heist", schema: HeistStateSchema },
+  { key: K.map, label: "Map", schema: MapStateSchema },
+];
+const memStore = (init: Record<string, string> = {}, failOn?: string) => {
+  const data = new Map(Object.entries(init));
+  return {
+    data,
+    get: (k: string) => data.get(k) ?? null,
+    set: (k: string, v: string) => {
+      if (k === failOn) throw new Error("QuotaExceededError");
+      data.set(k, v);
+    },
+    remove: (k: string) => void data.delete(k),
+  };
+};
+
+test("backup round trip restores exactly what was exported", () => {
+  const src = memStore({ [K.settings]: '{"motion":"reduced","splash":false}', [K.heist]: JSON.stringify(HeistStateSchema.parse({ activeId: "a" })) });
+  const { file } = createBackup(parts, src);
+  const dst = memStore();
+  const plan = planRestore(JSON.stringify(file), parts, dst);
+  assert.equal(plan.ok, true);
+  assert.ok(plan.ok && applyRestore(plan, dst).ok);
+  assert.equal(dst.get(K.settings), src.get(K.settings));
+  assert.equal(dst.get(K.heist), src.get(K.heist));
+});
+
+test("a damaged or invalid backup changes nothing", () => {
+  const dst = memStore({ [K.settings]: '{"motion":"full","splash":true}' });
+  const before = new Map(dst.data);
+  for (const text of ["not json", "{}", JSON.stringify({ format: "other" }), JSON.stringify({ format: BACKUP_FORMAT, version: 99, parts: {} })]) {
+    assert.equal(planRestore(text, parts, dst).ok, false, text);
+  }
+  // One valid part, one invalid part: all or nothing.
+  const { file } = createBackup(parts, memStore({ [K.settings]: '{"motion":"reduced","splash":true}', [K.heist]: '{"plans":[]}' }));
+  (file.parts[K.heist]!.data as Record<string, unknown>).plans = "nope";
+  file.parts[K.heist]!.checksum = checksum(JSON.stringify(file.parts[K.heist]!.data));
+  const plan = planRestore(JSON.stringify(file), parts, dst);
+  assert.equal(plan.ok, false);
+  assert.match(!plan.ok ? plan.error : "", /Heist/);
+  // A part changed without updating its checksum.
+  const { file: f2 } = createBackup(parts, memStore({ [K.settings]: '{"motion":"reduced","splash":true}' }));
+  (f2.parts[K.settings]!.data as Record<string, unknown>).motion = "full";
+  assert.equal(planRestore(JSON.stringify(f2), parts, dst).ok, false);
+  assert.deepEqual(dst.data, before);
+});
+
+test("if storage fills up part-way through a restore, everything is put back", () => {
+  const before = { [K.settings]: '{"motion":"full","splash":true}', [K.heist]: '{"plans":[],"activeId":"old"}' };
+  const dst = memStore(before, K.map);
+  const { file } = createBackup(parts, memStore({ [K.settings]: '{"motion":"reduced","splash":false}', [K.heist]: '{"plans":[],"activeId":"new"}', [K.map]: JSON.stringify(MapStateSchema.parse({})) }));
+  const plan = planRestore(JSON.stringify(file), parts, dst);
+  assert.ok(plan.ok);
+  const r = applyRestore(plan as never, dst);
+  assert.equal(r.ok, false);
+  assert.deepEqual(Object.fromEntries(dst.data), before);
+});
+
+test("version 1 backups from earlier previews still restore", () => {
+  const v1 = { format: BACKUP_FORMAT, version: 1, exportedAt: "2026-11-20T00:00:00Z", [K.settings]: { motion: "reduced", splash: true }, "riptide.unknown.v9": {} };
+  const dst = memStore();
+  const plan = planRestore(JSON.stringify(v1), parts, dst);
+  assert.ok(plan.ok);
+  assert.deepEqual(plan.ok && plan.unknown, ["riptide.unknown.v9"]);
+  assert.ok(plan.ok && applyRestore(plan, dst).ok);
+  assert.deepEqual(JSON.parse(dst.get(K.settings)!), { motion: "reduced", splash: true });
+});
+
+test("export leaves out damaged parts and says so", () => {
+  const { file, skipped } = createBackup(parts, memStore({ [K.settings]: "{cut", [K.heist]: '{"plans":[]}' }));
+  assert.deepEqual(skipped, ["Settings"]);
+  assert.ok(file.parts[K.heist] && !file.parts[K.settings]);
+});
+
+/* ---------- audit fixes: ViceLab measurement integrity ---------- */
+const pmRows = (rows: [string, string, string, number, number?][]) =>
+  ["Application,ProcessID,SwapChainAddress,MsBetweenPresents,MsBetweenDisplayChange", ...rows.map(([a, p, s, ms, d]) => `${a},${p},${s},${ms},${d ?? ms}`)].join("\n");
+
+test("presented and displayed frames are kept apart", () => {
+  // 120 presented FPS, but frame generation doubles what reaches the screen.
+  const rows: [string, string, string, number, number][] = Array.from({ length: 600 }, () => ["Game.exe", "100", "0xA", 8.333, 4.1665]);
+  const p = parseCapture(pmRows(rows));
+  assert.equal(p.metric, "presented");
+  assert.equal(computeStats(p.frametimesMs).avgFps, 120);
+  assert.ok(p.displayedMs);
+  assert.equal(computeStats(p.displayedMs!).avgFps, 240);
+});
+
+test("missing displayed times are never filled in from presented ones", () => {
+  const csv = ["MsBetweenPresents", ...Array.from({ length: 100 }, () => "16.667")].join("\n");
+  const p = parseCapture(csv);
+  assert.equal(p.metric, "presented");
+  assert.equal(p.displayedMs, undefined);
+  const only = parseCapture(["MsBetweenDisplayChange", ...Array.from({ length: 100 }, () => "16.667")].join("\n"));
+  assert.equal(only.metric, "displayed");
+  assert.ok(only.notes.some((n) => /displayed/.test(n)));
+});
+
+test("a second process or swap chain doesn't inflate or halve the frame rate", () => {
+  // The game at 60 FPS interleaved with an overlay at 60 FPS: mixing them would read as ~120 FPS.
+  const rows: [string, string, string, number][] = [];
+  for (let i = 0; i < 600; i++) {
+    rows.push(["Game.exe", "100", "0xA", 16.667]);
+    if (i % 2 === 0) rows.push(["Overlay.exe", "200", "0xB", 16.667]);
+  }
+  const p = parseCapture(pmRows(rows));
+  assert.equal(p.frametimesMs.length, 600);
+  assert.equal(p.filtered, 300);
+  assert.equal(computeStats(p.frametimesMs).avgFps, 60);
+  assert.ok(p.notes.some((n) => /2 processes or swap chains/.test(n) && /Game\.exe/.test(n)));
+});
+
+test("frames presented but never displayed are counted, not shown as display time", () => {
+  const rows: [string, string, string, number, number][] = Array.from({ length: 200 }, (_, i) => ["G", "1", "0x1", 10, i % 10 === 0 ? 0 : 10]);
+  const p = parseCapture(pmRows(rows));
+  assert.equal(p.displayedMs!.length, 180);
+  assert.ok(p.notes.some((n) => /20 presented frames never reached the screen/.test(n)));
+});
+
+test("CapFrameX files with several runs aren't joined into one", () => {
+  const run = (ms: number) => ({ CaptureData: { MsBetweenPresents: Array.from({ length: 300 }, () => ms) } });
+  const p = parseCapture(JSON.stringify({ Runs: [run(10), run(20)] }), "x.json");
+  assert.equal(p.frametimesMs.length, 300);
+  assert.equal(computeStats(p.frametimesMs).avgFps, 100);
+  assert.ok(p.notes.some((n) => /2 runs/.test(n)));
+});
+
+test("decimal commas in ';' separated files are read", () => {
+  const p = parseCapture(["MsBetweenPresents;Other", ...Array.from({ length: 100 }, () => "16,667;x")].join("\n"));
+  assert.equal(computeStats(p.frametimesMs).avgFps, 60);
+});
+
+test("recommendations never compare runs from different hardware, resolutions or scenes", () => {
+  const r = (id: string, preset: string, avg: number, low: number, ctx: Partial<{ hardwareId: string; scene: string; resolution: string }>) => ({ id, game: "gtav", preset, stats: { avgFps: avg, low1Fps: low }, ...ctx });
+  const pc1 = { hardwareId: "pc1", scene: "Downtown", resolution: "2560x1440" };
+  // A 1080p run on another PC looks great, but must not be compared with the 1440p runs.
+  const mixed = [r("a", "high", 70, 55, pc1), r("b", "low", 120, 90, { hardwareId: "pc2", scene: "Downtown", resolution: "1920x1080" })];
+  assert.equal(recommend(mixed, "gtav", "balanced", 60), null, "no two comparable presets");
+  const scenes = [r("a", "high", 70, 55, pc1), r("b", "ultra", 90, 70, { ...pc1, scene: "Countryside" })];
+  assert.equal(recommend(scenes, "gtav", "balanced", 60), null);
+  const res = [r("a", "high", 70, 55, pc1), r("b", "ultra", 90, 70, { ...pc1, resolution: "1920x1080" })];
+  assert.equal(recommend(res, "gtav", "balanced", 60), null);
+  // Comparable runs, measured twice each: a confident pick, with the outsider excluded.
+  const good = [r("a1", "high", 75, 58, pc1), r("a2", "high", 74, 57, pc1), r("u1", "ultra", 58, 40, pc1), r("u2", "ultra", 57, 41, pc1), r("x", "ultra", 200, 150, { hardwareId: "pc9", scene: "Downtown", resolution: "1920x1080" })];
+  const rec = recommend(good, "gtav", "balanced", 60)!;
+  assert.equal(rec.run.preset, "high");
+  assert.equal(rec.confidence, "ok");
+  assert.equal(rec.excluded, 1);
+  assert.ok(!rec.compared.includes("x"));
+});
+
+test("recommendations without hardware or scene, or with single runs, say they're low confidence", () => {
+  const rec = recommend([{ id: "a", game: "g", preset: "low", stats: { avgFps: 100, low1Fps: 80 } }, { id: "b", game: "g", preset: "high", stats: { avgFps: 70, low1Fps: 50 } }], "g", "balanced", 60)!;
+  assert.equal(rec.confidence, "low");
+  assert.equal(rec.caveats.length, 3);
 });

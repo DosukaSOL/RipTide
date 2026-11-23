@@ -484,3 +484,13 @@
 @media (prefers-reduced-motion: reduce) {
   .rt-upd-scrim, .rt-upd, .rt-upd[data-status="installing"] .rt-upd-mark { animation: none; }
 }
+
+/* ---------- backup check before restoring ---------- */
+.rt-restore { margin: 0 0 16px; padding: 14px 16px; border: 1px solid var(--rt-line-2); border-radius: 12px; background: var(--rt-panel-2, rgba(255,255,255,.03)); font-size: 14px; }
+.rt-restore ul { margin: 8px 0 12px; padding-left: 18px; color: var(--rt-sub); }
+.rt-restore li[data-status="invalid"] { color: var(--rt-pink); }
+.rt-restore li[data-status="replace"] { color: var(--rt-sand); }
+
+/* ---------- ViceLab capture notes ---------- */
+.rt-notes { margin: 12px 0 0; padding: 12px 16px 12px 34px; border: 1px solid var(--rt-line); border-radius: 12px; color: var(--rt-sub); font-size: 13.5px; line-height: 1.5; }
+.rt-notes li + li { margin-top: 4px; }

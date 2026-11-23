@@ -86,21 +86,33 @@ function Benchmarks({ s, set, run, onSaved }: { s: ViceLabState; set: Set; run?:
   const { toast } = useShell();
   const [preset, setPreset] = useState<string>("high");
   const [hardwareId, setHardwareId] = useState("");
+  const [scene, setScene] = useState("");
   const [phase, setPhase] = useState<"form" | "timing" | "import">("form");
   const [left, setLeft] = useState(0);
+  /** When the timed run ends, as a wall-clock time, so a background tab or sleep can't stretch it. */
+  const deadline = useRef(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const priority = PRIORITY.find((p) => p.id === s.priority) ?? PRIORITY[0]!;
 
+  // Count down from a fixed end time instead of subtracting a second per tick: browsers slow
+  // timers in background tabs, and a computer can sleep, but the remaining time stays right.
   useEffect(() => {
     if (phase !== "timing") return;
-    if (left <= 0) {
-      setPhase("import");
-      return;
-    }
-    const t = setTimeout(() => setLeft((l) => l - 1), 1000);
-    return () => clearTimeout(t);
-  }, [phase, left]);
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000));
+      setLeft(remaining);
+      if (remaining <= 0) setPhase("import");
+    };
+    tick();
+    const t = setInterval(tick, 250);
+    const onVis = () => document.visibilityState === "visible" && tick();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [phase]);
 
   const importFile = async (f: File) => {
     setError("");
@@ -109,18 +121,22 @@ function Benchmarks({ s, set, run, onSaved }: { s: ViceLabState; set: Set; run?:
       const text = await readFileText(f, LIMITS.maxBytes);
       const parsed = parseCapture(text, f.name);
       const stats = computeStats(parsed.frametimesMs);
+      const shown = parsed.displayedMs ? computeStats(parsed.displayedMs) : null;
       const series = downsample(parsed.frametimesMs, 1200).map((p) => [Math.round(p.t * 1000) / 1000, Math.round(p.avg * 100) / 100, Math.round(p.max * 100) / 100] as [number, number, number]);
       const r: Run = {
         id: uid(),
         name: f.name.replace(/\.[^.]+$/, "").slice(0, 80) || "Capture",
         game: s.game || "other",
         preset,
-        scene: "",
+        scene: scene.trim().slice(0, 80),
         hardwareId,
         source: parsed.source,
         fileName: f.name.slice(0, 200),
         createdAt: Date.now(),
+        metric: parsed.metric,
         stats,
+        ...(shown ? { displayed: { avgFps: shown.avgFps, low1Fps: shown.low1Fps } } : {}),
+        notes: parsed.notes.slice(0, 10).map((n) => n.slice(0, 300)),
         series,
       };
       set((d) => {
@@ -129,7 +145,7 @@ function Benchmarks({ s, set, run, onSaved }: { s: ViceLabState; set: Set; run?:
       });
       onSaved(r.id);
       setPhase("form");
-      toast(`Saved ${r.name}: ${stats.avgFps} FPS average${parsed.skipped ? `, ${parsed.skipped} invalid rows skipped` : ""}`);
+      toast(`Saved ${r.name}: ${stats.avgFps} FPS average (${parsed.metric})${parsed.skipped ? `, ${parsed.skipped} invalid rows skipped` : ""}${parsed.notes.length ? ". See the notes under the stats" : ""}`);
     } catch (e) {
       setError(e instanceof CaptureError || e instanceof Error ? e.message : "This file couldn't be read.");
     } finally {
@@ -194,6 +210,9 @@ function Benchmarks({ s, set, run, onSaved }: { s: ViceLabState; set: Set; run?:
                   )}
                 </Field>
               </div>
+              <Field label="Test scene" hint="Name the place you test, like “Downtown drive”. Only runs of the same scene are compared.">
+                {(id) => <input id={id} className="rt-input" value={scene} maxLength={80} placeholder="Downtown drive" onChange={(e) => setScene(e.target.value)} />}
+              </Field>
               {s.hardware.length > 0 && (
                 <Field label="Hardware profile">
                   {(id) => (
@@ -204,7 +223,7 @@ function Benchmarks({ s, set, run, onSaved }: { s: ViceLabState; set: Set; run?:
                   )}
                 </Field>
               )}
-              <button className="rt-btn rt-primary rt-block" style={{ marginTop: 26 }} disabled={!s.game} onClick={() => (setLeft(s.duration), setPhase("timing"), setError(""))}>
+              <button className="rt-btn rt-primary rt-block" style={{ marginTop: 26 }} disabled={!s.game} onClick={() => ((deadline.current = Date.now() + s.duration * 1000), setLeft(s.duration), setPhase("timing"), setError(""))}>
                 Start benchmark
               </button>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, gap: 12 }}>
@@ -225,7 +244,7 @@ function Benchmarks({ s, set, run, onSaved }: { s: ViceLabState; set: Set; run?:
               </ol>
               <div className="rt-timer" style={{ marginTop: 22 }}>{Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}</div>
               <div className="rt-progress" aria-hidden="true"><i style={{ width: `${(1 - left / s.duration) * 100}%` }} /></div>
-              <p className="rt-hint">RipTide doesn't record the game itself. It times your run and analyses the capture.</p>
+              <p className="rt-hint">This is only a timer. RipTide doesn't record the game: your capture tool does, and RipTide analyses the file.</p>
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                 <button className="rt-btn" onClick={() => setPhase("import")}>I'm done</button>
                 <button className="rt-btn rt-ghost" onClick={() => setPhase("form")}>Cancel</button>
@@ -246,10 +265,15 @@ function Benchmarks({ s, set, run, onSaved }: { s: ViceLabState; set: Set; run?:
       </div>
 
       <div className="rt-stats">
-        <Stat label="Average FPS" value={run?.stats.avgFps} />
-        <Stat label="1% low FPS" value={run?.stats.low1Fps} sub={run ? `0.1% low ${run.stats.low01Fps}` : undefined} />
+        <Stat label="Average FPS" value={run?.stats.avgFps} sub={run ? (run.metric === "displayed" ? "Displayed frames" : run.displayed ? `Presented frames. Displayed: ${run.displayed.avgFps}` : "Presented frames. Displayed FPS isn't in this capture") : undefined} />
+        <Stat label="1% low FPS" value={run?.stats.low1Fps} sub={run ? `0.1% low ${run.stats.low01Fps}${run.displayed ? `. Displayed 1% low: ${run.displayed.low1Fps}` : ""}` : undefined} />
         <Stat label="Frame-time stability" value={run ? `±${run.stats.stddevMs}` : undefined} unit="ms" sub={run ? `99th percentile ${run.stats.p99Ms} ms` : undefined} />
       </div>
+      {run && run.notes.length > 0 && (
+        <ul className="rt-notes" aria-label="Notes about this capture">
+          {run.notes.map((n, i) => <li key={i}>{n}</li>)}
+        </ul>
+      )}
     </>
   );
 }
@@ -413,9 +437,13 @@ function SelectedFile({ label, file, onClear }: { label: string; file: File; onC
 function Recommend({ s, set }: { s: ViceLabState; set: Set }) {
   const games = [...new Set(s.runs.map((r) => r.game))];
   const [game, setGame] = useState(games[0] ?? "");
-  const rec = useMemo(() => (game ? recommend(s.runs.map((r) => ({ id: r.id, game: r.game, preset: r.preset, stats: r.stats })), game, s.priority, s.targetFps) : null), [s.runs, game, s.priority, s.targetFps]);
+  const rec = useMemo(() => {
+    if (!game) return null;
+    const res = new Map(s.hardware.map((h) => [h.id, h.resolution]));
+    return recommend(s.runs.map((r) => ({ id: r.id, game: r.game, preset: r.preset, stats: r.stats, hardwareId: r.hardwareId, scene: r.scene, resolution: res.get(r.hardwareId) ?? "", metric: r.metric })), game, s.priority, s.targetFps);
+  }, [s.runs, s.hardware, game, s.priority, s.targetFps]);
   const recRun = rec ? s.runs.find((r) => r.id === rec.run.id) : undefined;
-  const pool = s.runs.filter((r) => r.game === game);
+  const pool = rec ? s.runs.filter((r) => rec.compared.includes(r.id)) : [];
   return (
     <div className="rt-vl-grid">
       <section className="rt-panel rt-pad">
@@ -423,8 +451,8 @@ function Recommend({ s, set }: { s: ViceLabState; set: Set }) {
           <div className="rt-gridbg" style={{ display: "grid", placeItems: "center", minHeight: 320, borderRadius: 12 }}>
             <div className="rt-empty">
               <LuChartColumnIncreasing />
-              <h3>Recommendations need your own results.</h3>
-              <p>Benchmark the same game at two or more presets (Low, Medium, High or Ultra) and ViceLab will pick the best fit from those runs.</p>
+              <h3>Recommendations need comparable results.</h3>
+              <p>Benchmark the same game, scene and hardware profile at two or more presets (Low, Medium, High or Ultra) and ViceLab will pick the best fit from those runs. Runs from different PCs, resolutions or scenes are never compared.</p>
             </div>
           </div>
         ) : (
@@ -433,6 +461,12 @@ function Recommend({ s, set }: { s: ViceLabState; set: Set }) {
             <h2 style={{ fontFamily: "var(--rt-display)", fontSize: 30, marginTop: 10 }}>{cap(rec.run.preset)} preset</h2>
             <p style={{ color: "var(--rt-sub)", marginTop: 8 }}>{rec.reason}</p>
             {recRun && <p className="rt-hint">From “{recRun.name}”: {recRun.stats.avgFps} FPS average, {recRun.stats.low1Fps} FPS 1% low.</p>}
+            {rec.caveats.length > 0 && (
+              <div className="rt-banner rt-warn" role="note" style={{ marginTop: 12 }}>
+                <b>Low confidence.</b> {rec.caveats.join(" ")}
+              </div>
+            )}
+            {rec.excluded > 0 && <p className="rt-hint">{rec.excluded} other run{rec.excluded === 1 ? " was" : "s were"} left out because {rec.excluded === 1 ? "it was" : "they were"} made on different hardware, at a different resolution or in a different scene.</p>}
             <table className="rt-table" style={{ marginTop: 20 }}>
               <thead><tr><th>Run</th><th>Preset</th><th>Average</th><th>1% low</th></tr></thead>
               <tbody>

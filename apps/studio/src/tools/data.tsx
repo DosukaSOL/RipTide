@@ -1,3 +1,4 @@
+import { desktopBridge } from "../desktop";
 import { createContext, useContext, type ReactNode } from "react";
 import { Flags, KEYS, Settings, WorkspacesState, type Workspace } from "@riptide/tools";
 import { usePersisted } from "./persist";
@@ -53,11 +54,22 @@ export function writeFlags(f: Flags) {
 }
 
 /**
- * The new shell is opt-in while it's in preview. `?shell=tools` turns it on,
- * `?shell=classic` turns it off; the choice is remembered.
+ * The new shell is opt-in in the browser while it's in preview. `?shell=tools` turns it on,
+ * `?shell=classic` turns it off; the choice is remembered. The desktop app starts in the Tools
+ * shell the first time, then remembers whichever shell you picked, across restarts.
  */
 export function wantsToolsShell(): boolean {
   const p = new URLSearchParams(location.search).get("shell");
+  let chosen = true;
+  try {
+    chosen = localStorage.getItem(KEYS.flags) !== null;
+  } catch {
+    chosen = true;
+  }
+  if (!p && !chosen && desktopBridge()) {
+    writeFlags({ ...readFlags(), toolsShell: true });
+    return true;
+  }
   const flags = readFlags();
   if (p === "tools" && !flags.toolsShell) writeFlags({ ...flags, toolsShell: true });
   if (p === "classic" && flags.toolsShell) writeFlags({ ...flags, toolsShell: false });

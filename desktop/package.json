@@ -29,6 +29,7 @@
       "main.cjs",
       "preload.cjs",
       "storage.cjs",
+      "appfiles.cjs",
       "updates.cjs",
       "updater.cjs",
       "vendor/**/*",
