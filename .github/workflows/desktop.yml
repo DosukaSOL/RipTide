@@ -27,10 +27,10 @@ on:
 permissions:
   contents: read
 
-# Never two releases at once.
+# One run at a time; a newer push replaces a run that's still building.
 concurrency:
   group: desktop-release
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   # Works out which version this run is for, and whether it should be published.
@@ -58,6 +58,7 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -88,6 +89,7 @@ jobs:
       # Launch the real Linux app and check saving, restarts, backups and pop-outs.
       - name: Test the packaged app (Linux)
         if: runner.os == 'Linux'
+        timeout-minutes: 12
         run: xvfb-run -a -s "-screen 0 1920x1080x24" node desktop/test/app.e2e.mjs desktop/release/linux-unpacked/riptide-tools
 
       # No Apple developer certificate yet: build the app, sign it ad hoc so it

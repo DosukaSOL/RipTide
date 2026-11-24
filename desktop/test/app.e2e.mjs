@@ -4,20 +4,44 @@ import { _electron as electron } from "playwright";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 
 const exe = process.argv[2];
 if (!exe || !existsSync(exe)) throw new Error("Pass the path to the unpacked app executable.");
 const dataDir = mkdtempSync(join(tmpdir(), "riptide-data-"));
 const profile = mkdtempSync(join(tmpdir(), "riptide-profile-"));
-const env = { ...process.env, RIPTIDE_DATA_DIR: dataDir, RIPTIDE_USER_DATA: profile, RIPTIDE_UPDATES: "off" }; // tests never ask GitHub for updates
+// A stand-in for the system's "open in browser" command, so clicking a website link records the
+// address instead of starting a real browser (which would also keep the test from finishing).
+const fakeBin = mkdtempSync(join(tmpdir(), "riptide-bin-"));
+const opened = join(fakeBin, "opened.txt");
+for (const cmd of ["xdg-open", "open"]) writeFileSync(join(fakeBin, cmd), `#!/bin/sh\necho "$1" >> "${opened}"\n`, { mode: 0o755 });
+const env = { ...process.env, PATH: `${fakeBin}${delimiter}${process.env.PATH}`, BROWSER: join(fakeBin, "xdg-open"), RIPTIDE_DATA_DIR: dataDir, RIPTIDE_USER_DATA: profile, RIPTIDE_UPDATES: "off" }; // tests never ask GitHub for updates
 const args = process.platform === "linux" ? ["--no-sandbox"] : []; // containers have no setuid sandbox helper
 let passed = 0;
+// Never hang a CI job: give up after 8 minutes and say which check was running.
+let current = "starting";
 const step = async (name, fn) => {
+  current = name;
   await fn();
   passed++;
   console.log(`  ✓ ${name}`);
 };
+/** Close the app, and force it if it doesn't exit within 20 s, so a stuck close fails loudly instead of hanging. */
+const closeApp = async (a) => {
+  let timer;
+  const forced = new Promise((r) => (timer = setTimeout(() => r("forced"), 20000)));
+  const how = await Promise.race([a.close().then(() => "closed"), forced]);
+  clearTimeout(timer);
+  if (how === "forced") {
+    a.process().kill("SIGKILL");
+    throw new Error("The app didn't close within 20 seconds");
+  }
+};
+setTimeout(() => {
+  console.error(`\nTimed out during: ${current}`);
+  process.exit(1);
+}, 8 * 60 * 1000).unref();
+
 const launch = async (ready = ".rt-root") => {
   const app = await electron.launch({ executablePath: exe, args, env });
   const win = await app.firstWindow();
@@ -92,10 +116,11 @@ await step("links to websites never open inside the app", async () => {
   await win.waitForTimeout(800);
   assert.equal(app.windows().length, before);
   assert.match(win.url(), /^app:\/\/riptide\//);
+  if (process.platform === "linux") assert.match(readFileSync(opened, "utf8"), /^https:\/\/github\.com\//m, "handed to the system browser");
 });
 
 assert.deepEqual(errors, []);
-await app.close();
+await closeApp(app);
 
 // Edit the file while the app is closed: the file must win on the next start.
 const f = join(dataDir, "riptide.heist.v1.json");
@@ -115,7 +140,7 @@ await step("saving again keeps the previous version as a backup", async () => {
   assert.match(readFileSync(f, "utf8"), /Second edit/);
   assert.match(readFileSync(`${f}.bak`, "utf8"), /Edited on disk/);
 });
-await app.close();
+await closeApp(app);
 
 // Damage the main file: the backup (the version before the last save) takes over.
 writeFileSync(f, '{"plans": [');
@@ -126,7 +151,7 @@ await step("a damaged file falls back to its backup", async () => {
   assert.equal(await win.inputValue("#rt-plan-notes"), "Edited on disk");
 });
 assert.deepEqual(errors, []);
-await app.close();
+await closeApp(app);
 
 // Valid JSON in the wrong shape (not cut off): the schema check catches it and the backup is used.
 writeFileSync(f, JSON.stringify({ plans: [{ schema: 99 }] }));
@@ -146,7 +171,7 @@ await step("switching to the classic Studio is remembered after a restart", asyn
   await win.waitForSelector(".shell .nav", { timeout: 20000 });
 });
 assert.deepEqual(errors, []);
-await app.close();
+await closeApp(app);
 
 // Delete the heist file while the app is closed: it must stay deleted, not come back from the
 // browser engine's copy.
@@ -163,5 +188,5 @@ await step("a data file deleted outside the app stays deleted", async () => {
   await win.waitForTimeout(600);
   assert.equal(existsSync(f), false, "not written back");
 });
-await app.close();
+await closeApp(app);
 console.log(`\n${passed} desktop checks passed (data in ${dataDir})`);
