@@ -4,7 +4,7 @@ name: Desktop app
 #
 # Three ways to release:
 # - Raise "version" in desktop/package.json and push to main. If there's no release for that
-#   version yet, it's built and published. (Pushes that don't change the version do nothing.)
+#   version yet, it's built and published. (Once it's released, pushes only run a quick check.)
 # - Push a tag like v0.1.0.
 # - Run it from the Actions tab and type the version (leave it empty to only build).
 #
@@ -12,9 +12,10 @@ name: Desktop app
 # read these to find the new version and check the download's sha512 before installing it,
 # so the version you type becomes the app's version, and must be higher than the last one.
 on:
+  # Every push to main runs the quick "version" job; the builds only run when that version
+  # hasn't been released yet (so a failed release is retried by the next push).
   push:
     branches: [main]
-    paths: ["desktop/package.json", ".github/workflows/desktop.yml"]
     tags: ["v*"]
   workflow_dispatch:
     inputs:

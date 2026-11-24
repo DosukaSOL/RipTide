@@ -17,7 +17,7 @@ const setup = () => {
 
 test("serves files inside the app folder", async () => {
   const { app } = setup();
-  const real = fs.realpathSync(app);
+  const real = fs.realpathSync.native(app); // the same form the app uses (Windows short names expanded)
   assert.deepEqual(await resolveAppFile(app, "app://riptide/"), { status: 200, file: path.join(real, "index.html") });
   assert.deepEqual(await resolveAppFile(app, "app://riptide/index.html?x=1#y"), { status: 200, file: path.join(real, "index.html") });
   assert.deepEqual(await resolveAppFile(app, "app://riptide/map/a%20b.json"), { status: 200, file: path.join(real, "map", "a b.json") });
