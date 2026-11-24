@@ -41,7 +41,7 @@ One click, like a game launcher: the app checks for a new version, shows a popup
 
 ## Builds and releases
 
-- `.github/workflows/desktop.yml` builds a Windows installer, a universal macOS DMG and zip, a Linux AppImage and a `.deb`, with the `latest*.yml` update files. Run it from the Actions tab with a version like `v0.2.0` (or push that tag) to publish a GitHub Release. The version you type becomes the app's version, so each release must be higher than the last one for installed apps to update.
+- `.github/workflows/desktop.yml` builds a Windows installer, a universal macOS DMG and zip, a Linux AppImage and a `.deb`, with the `latest*.yml` update files and a `SHA256SUMS.txt`. To release, raise `version` in `desktop/package.json` and push to `main`: if that version has no release yet, it's built and published (`.github/scripts/release-version.sh` decides). Pushing a tag like `v0.2.0`, or running the workflow from the Actions tab, also works. Each release must be a higher version than the last for installed apps to update.
 - The Linux build is launched and tested automatically (`desktop/test/app.e2e.mjs`): saving, restarts, backups and recovery, files deleted outside the app, the remembered shell choice, pop-outs, link handling, `app://` path safety, and no network or Node access.
 - `app://riptide/` only serves files inside the packaged app folder: undecodable addresses get 400, and `../`, encoded slashes, backslashes, null bytes and symlinks that lead outside get 403 (`desktop/appfiles.cjs`).
 - The builds aren't code-signed yet. macOS builds are signed ad hoc so they run on Apple silicon. Proper signing comes later.

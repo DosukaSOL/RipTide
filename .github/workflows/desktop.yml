@@ -1,29 +1,57 @@
 name: Desktop app
 
 # Builds RipTide Tools for Windows, macOS and Linux and publishes a GitHub Release.
-# Either push a tag like v0.1.0, or run it from the Actions tab and type the version.
+#
+# Three ways to release:
+# - Raise "version" in desktop/package.json and push to main. If there's no release for that
+#   version yet, it's built and published. (Pushes that don't change the version do nothing.)
+# - Push a tag like v0.1.0.
+# - Run it from the Actions tab and type the version (leave it empty to only build).
 #
 # Every release also carries latest.yml, latest-mac.yml and latest-linux.yml. Installed apps
 # read these to find the new version and check the download's sha512 before installing it,
 # so the version you type becomes the app's version, and must be higher than the last one.
 on:
   push:
+    branches: [main]
+    paths: ["desktop/package.json", ".github/workflows/desktop.yml"]
     tags: ["v*"]
   workflow_dispatch:
     inputs:
       version:
         description: "Version to release, like v0.1.0. Leave empty to only build."
         required: false
-        default: "v0.1.0"
+        default: ""
 
 permissions:
   contents: read
 
-env:
-  VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.version }}
+# Never two releases at once.
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
 
 jobs:
+  # Works out which version this run is for, and whether it should be published.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      publish: ${{ steps.v.outputs.publish }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          INPUT: ${{ inputs.version }}
+        run: bash .github/scripts/release-version.sh
+
   build:
+    needs: version
+    if: needs.version.outputs.publish == 'true' || github.event_name == 'workflow_dispatch'
+    env:
+      VERSION: ${{ needs.version.outputs.tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -86,8 +114,8 @@ jobs:
             desktop/release/latest*.yml
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
-    needs: build
+    if: needs.version.outputs.publish == 'true'
+    needs: [version, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -99,7 +127,7 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ env.VERSION }}
+          TAG: ${{ needs.version.outputs.tag }}
         run: |
           if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then echo "Version must look like v0.1.0"; exit 1; fi
           ls -la dist
