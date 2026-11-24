@@ -5,9 +5,10 @@
 import { cpSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
-const here = resolve(new URL("..", import.meta.url).pathname);
+const here = fileURLToPath(new URL("..", import.meta.url)); // works on Windows too
 const src = resolve(here, "../apps/studio/dist");
 if (!existsSync(resolve(src, "index.html"))) {
   console.error("Build the app first: run `npm run build` in the repository root.");

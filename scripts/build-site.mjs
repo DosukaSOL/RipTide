@@ -3,8 +3,9 @@
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(new URL("../", import.meta.url).pathname);
+const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const out = join(ROOT, ".site");
 const app = join(ROOT, "apps/studio/dist");
 if (!existsSync(join(app, "index.html"))) throw new Error("Build the app first: npm run build");
