@@ -4,23 +4,30 @@ import { createServer } from "node:http";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
-const root = resolve("apps/studio/dist");
-const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json", ".ttf": "font/ttf", ".otf": "font/otf" };
-const server = createServer(async (req, res) => {
-  const p = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname)).replace(/^([/\\])+/, "");
-  const f = join(root, p || "index.html");
-  if (!f.startsWith(root + sep) && f !== root) return res.writeHead(403).end();
-  try {
-    res.writeHead(200, { "content-type": types[extname(f)] ?? "application/octet-stream" }).end(await readFile(f));
-  } catch {
-    res.writeHead(404).end();
-  }
-});
-await new Promise((r) => server.listen(0, "127.0.0.1", r));
-const base = `http://127.0.0.1:${server.address().port}`;
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json", ".ttf": "font/ttf", ".otf": "font/otf", ".txt": "text/plain; charset=utf-8" };
+/** Serves a built copy of the app on localhost only. */
+async function serveDir(dir) {
+  const root = resolve(dir);
+  const server = createServer(async (req, res) => {
+    const p = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname)).replace(/^([/\\])+/, "");
+    const f = join(root, p || "index.html");
+    if (!f.startsWith(root + sep) && f !== root) return res.writeHead(403).end();
+    try {
+      res.writeHead(200, { "content-type": types[extname(f)] ?? "application/octet-stream" }).end(await readFile(f));
+    } catch {
+      res.writeHead(404).end();
+    }
+  });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  return { server, url: `http://127.0.0.1:${server.address().port}` };
+}
+const main = await serveDir("apps/studio/dist");
+const server = main.server;
+const base = main.url;
 const arg = (n) => {
   const i = process.argv.indexOf(n);
   return i > 0 ? process.argv[i + 1] : undefined;
@@ -191,7 +198,7 @@ await check("start benchmark runs an honest timed session", async () => {
 });
 
 console.log("\nInteractive Map");
-const placesJson = JSON.parse(await readFile(join(root, "map/leonida/places.json"), "utf8"));
+const placesJson = JSON.parse(await readFile("apps/studio/dist/map/leonida/places.json", "utf8"));
 const safehouse = placesJson.places.find((p) => p[0] === "L16");
 const stageCentre = async (page) => {
   const b = await page.locator(".rt-map-stage").boundingBox();
@@ -267,6 +274,80 @@ await check("found tracking, hide found and separate playthroughs", async () => 
   assert.notEqual(await page.locator(".rt-place-title").innerText(), "Y Vice City", "next unfound skips found places");
   assert.deepEqual(errors, []);
   await ctx.close();
+});
+
+await check("map art switched off: grid instead, same places, progress and markers", async () => {
+  const { ctx, page, errors } = await fresh();
+  const jpgs = [];
+  page.on("request", (r) => r.url().endsWith(".jpg") && jpgs.push(r.url()));
+  await page.goto(tools("map"));
+  await page.locator(".rt-tiles image").first().waitFor({ state: "attached" });
+  await page.fill("#rt-map-q", "Y Vice City");
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "Mark as found" }).click();
+  await page.locator(".rt-progress-head").getByText(/^1$/).waitFor();
+  await page.fill("#rt-map-q", "");
+  await page.waitForTimeout(500);
+  await page.goto(tools("settings"));
+  await page.selectOption("#rt-basemap", "schematic");
+  await page.goto(tools("map"));
+  await page.locator('.rt-map-stage[data-basemap="schematic"] .rt-grid').waitFor({ state: "attached" });
+  jpgs.length = 0;
+  assert.equal(await page.locator(".rt-tiles image").count(), 0, "no map art drawn");
+  await page.getByText(new RegExp(`${placesJson.places.length.toLocaleString("en-US")} places shown`)).waitFor();
+  assert.ok((await page.locator(".rt-marker").count()) >= placesJson.places.length);
+  await page.locator(".rt-progress-head").getByText(/^1$/).waitFor();
+  await page.locator(".rt-map-badges").getByText("Schematic grid").waitFor();
+  assert.equal(await page.locator(".rt-map-credit").getByText(/Rockstar/).count(), 0, "no map art credit without map art");
+  await page.locator(".rt-map-credit").getByText(/Places/).waitFor();
+  // Zoom and pan: still no map art requested.
+  const c = await stageCentre(page);
+  await page.mouse.move(c.x, c.y);
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -400);
+  await page.waitForTimeout(300);
+  assert.deepEqual(jpgs, []);
+  await page.locator(".rt-grid-labels span").first().waitFor();
+  // A marker placed on the grid is at the same coordinates on the map art.
+  const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem("riptide.map.v2") ?? "{}"));
+  await page.getByRole("button", { name: "Add a personal marker" }).click();
+  await page.mouse.click(c.x + 37, c.y + 23);
+  await page.waitForFunction(() => (JSON.parse(localStorage.getItem("riptide.map.v2") ?? "{}").markers ?? []).length > 0);
+  const before = (await stored()).markers.at(-1);
+  await page.goto(tools("settings"));
+  await page.selectOption("#rt-basemap", "official");
+  await page.goto(tools("map"));
+  await page.locator(".rt-tiles image").first().waitFor({ state: "attached" });
+  await page.locator(".rt-progress-head").getByText(/^1$/).waitFor();
+  const after = (await stored()).markers.at(-1);
+  assert.deepEqual([after.id, after.x, after.y], [before.id, before.x, before.y]);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("a build without map art works and never asks for it", async () => {
+  const out = join(tmpdir(), `riptide-noart-${process.pid}`);
+  execFileSync(process.execPath, ["scripts/build-studio.mjs"], { env: { ...process.env, RIPTIDE_MAP_ART: "off", RIPTIDE_STUDIO_OUT: out }, stdio: "ignore" });
+  const noart = await serveDir(out);
+  try {
+    const { ctx, page, errors } = await fresh();
+    const asked = [];
+    page.on("request", (r) => /\/map\/leonida\/(manifest\.json|\d+\/)/.test(r.url()) && asked.push(r.url()));
+    await page.goto(`${noart.url}/?shell=tools&splash=0#/map`);
+    await page.locator('.rt-map-stage[data-basemap="schematic"] .rt-grid').waitFor({ state: "attached" });
+    await page.getByText(new RegExp(`${placesJson.places.length.toLocaleString("en-US")} places shown`)).waitFor();
+    assert.equal(await page.locator(".rt-banner, [role=alert]").count(), 0, "no error banner");
+    await page.goto(`${noart.url}/?shell=tools&splash=0#/settings`);
+    assert.ok(await page.locator("#rt-basemap").isDisabled());
+    await page.goto(`${noart.url}/?shell=tools&splash=0#/help`);
+    await page.locator(".rt-credits").getByText(/doesn't include map art/).waitFor();
+    await page.getByRole("button", { name: "Show licences" }).click();
+    await page.locator(".rt-licenses").getByText(/react-dom/).first().waitFor();
+    assert.deepEqual(asked, []);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  } finally {
+    noart.server.close();
+  }
 });
 
 await check("personal marker, categories and pop-out keep their state", async () => {

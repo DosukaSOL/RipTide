@@ -667,3 +667,46 @@ test("a store that silently drops writes is caught and rolled back", () => {
   assert.equal(applyRestore(plan as never, lossy).ok, false);
   assert.deepEqual(Object.fromEntries(dst.data), before);
 });
+
+/* ---------- map backgrounds ---------- */
+import { availableBasemaps, BASEMAPS, gridLabel, gridLines, pickBasemap } from "../src/basemap";
+
+test("the map art is only drawn when it's chosen, built in and loaded; otherwise the grid", () => {
+  assert.equal(pickBasemap("official", { artBuilt: true, tilesLoaded: true }).id, "official");
+  assert.equal(pickBasemap("official", { artBuilt: false, tilesLoaded: true }).id, "schematic");
+  assert.equal(pickBasemap("official", { artBuilt: true, tilesLoaded: false }).id, "schematic");
+  assert.equal(pickBasemap("schematic", { artBuilt: true, tilesLoaded: true }).id, "schematic");
+  assert.deepEqual(availableBasemaps(false).map((b) => b.id), ["schematic"]);
+  // The art has no licence on record, and the grid credits nobody else.
+  assert.equal(BASEMAPS.official.status, "rights-pending");
+  assert.equal(BASEMAPS.schematic.attribution, null);
+  assert.equal(BASEMAPS.schematic.tiles, false);
+});
+
+test("schematic grid lines stay readable at every zoom and inside the map", () => {
+  for (const z of [-0.5, 0, 1, 2, 3, 4, 5.5]) {
+    const { step, lines } = gridLines({ x: -3100, y: 1000, z }, 1600, 900);
+    assert.ok(step * (2 ** z / 32) >= 56 || step === 8000, `lines ${step} m apart at zoom ${z}`);
+    assert.ok(lines.length > 0 && lines.length <= 400);
+    assert.ok(lines.every((l) => Math.abs(l.at) <= 16384 && l.at % step === 0));
+    assert.ok(lines.some((l) => l.major) || step >= 4000);
+  }
+  assert.equal(gridLabel(0), "0");
+  assert.equal(gridLabel(-2000), "-2 km");
+  assert.equal(gridLabel(500), "500 m");
+});
+
+test("settings from before map backgrounds existed still load, with the art as before", () => {
+  assert.equal(SettingsSchema.parse({ motion: "reduced", splash: false }).basemap, "official");
+  assert.equal(SettingsSchema.safeParse({ basemap: "satellite" }).success, false);
+});
+
+/* ---------- licences for the built app ---------- */
+test("every bundled package's licence is checked and shipped", async () => {
+  const { bundledPackages, collect, ALLOWED } = await import("../../../scripts/licenses.mjs");
+  assert.deepEqual(bundledPackages(["node_modules/react/index.js", "node_modules/@scope/pkg/a.js", "node_modules/react/cjs/x.js", "apps/studio/src/main.tsx"]), ["node_modules/@scope/pkg", "node_modules/react"]);
+  const { packages, problems } = collect(["node_modules/react/index.js", "node_modules/zod/index.js"]);
+  assert.deepEqual(problems, []);
+  assert.ok(packages.every((p) => ALLOWED.has(p.license) && p.text.length > 100));
+  assert.ok(!ALLOWED.has("GPL-3.0") && !ALLOWED.has("AGPL-3.0"));
+});

@@ -26,6 +26,8 @@ export type Flags = z.infer<typeof Flags>;
 export const Settings = z.object({
   motion: z.enum(["system", "reduced", "full"]).default("system"),
   splash: z.boolean().default(true),
+  /** Map background. Ignored when this build leaves the map art out (see basemap.ts). */
+  basemap: z.enum(["official", "schematic"]).default("official"),
 });
 export type Settings = z.infer<typeof Settings>;
 

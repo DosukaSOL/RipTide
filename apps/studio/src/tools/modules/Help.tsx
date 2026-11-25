@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { LuExternalLink } from "react-icons/lu";
 import { PageHeader } from "../ui";
 import { HeaderRight } from "./common";
+import { useToolsData } from "../data";
+import { MAP_ART_BUILT } from "../mapdata";
 
 const SHORTCUTS: [string, string][] = [
   ["Alt + 1–9", "Jump to a tool in the sidebar"],
@@ -32,7 +35,7 @@ export function Help() {
               <li>RipTide is independent and isn't affiliated with Rockstar Games or Take-Two Interactive.</li>
               <li>Nothing is uploaded. Captures, screenshots, plans and markers stay on this device.</li>
               <li>GTA VI features that need the game on PC, like ViceLab tests and server support, wait for the PC release and Rockstar's server tools.</li>
-              <li>The Interactive Map uses Rockstar's official map of Leonida. Its places come from the gtadb.org community (CC BY 4.0) and may not all be exact yet.</li>
+              <li>The Interactive Map's places come from the gtadb.org community (CC BY 4.0) and may not all be exact yet. You can switch the map background between the map art and RipTide's own grid in Settings.</li>
               <li>RipTide never reads game memory, injects into game processes or automates gameplay.</li>
               <li>Studio deploys are simulated until RipTide hosting opens. Building FiveM server files works today.</li>
             </ul>
@@ -47,6 +50,53 @@ export function Help() {
           </section>
         </div>
       </div>
+      <About />
     </div>
+  );
+}
+
+const CC_BY = "https://creativecommons.org/licenses/by/4.0/";
+
+/** Who made what. The map art, the place data and the software each get their own credit. */
+function About() {
+  const { settings } = useToolsData();
+  const [licenses, setLicenses] = useState<string | null>(null);
+  const [err, setErr] = useState("");
+  const art = MAP_ART_BUILT && settings.basemap === "official";
+  const showLicenses = async () => {
+    try {
+      const r = await fetch("./THIRD_PARTY_LICENSES.txt", { credentials: "same-origin" });
+      if (!r.ok) throw new Error(String(r.status));
+      setLicenses(await r.text());
+    } catch {
+      setErr("The licence list couldn't be opened. It's also in THIRD_PARTY_LICENSES.txt next to the app.");
+    }
+  };
+  return (
+    <section className="rt-panel rt-pad" aria-labelledby="rt-about" style={{ marginTop: 24 }}>
+      <h2 id="rt-about">About and credits</h2>
+      <p className="rt-notice" style={{ margin: "10px 0 16px" }}>
+        RipTide is independent software. It isn't affiliated with, endorsed by or sponsored by Rockstar Games or Take-Two Interactive. "Official" in RipTide only says where something comes from, not that Rockstar approved RipTide.
+      </p>
+      <dl className="rt-credits">
+        <dt>Map background</dt>
+        <dd>
+          {MAP_ART_BUILT
+            ? <>The map art of Leonida is © Rockstar Games; the tiles were prepared by gtadb.org. {art ? "It's shown now." : "It's switched off in Settings, so RipTide's own grid is shown."}</>
+            : <>This copy of RipTide doesn't include map art. The grid is RipTide's own drawing.</>}
+        </dd>
+        <dt>Places</dt>
+        <dd>GTA VI Landmarks Data by <a href="https://map.gtadb.org" target="_blank" rel="noopener noreferrer">gtadb.org</a> and contributors, under <a href={CC_BY} target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Changed by RipTide: unconfirmed and duplicate entries removed, sorted into RipTide's categories, street addresses and private homes removed, positions rounded.</dd>
+        <dt>Software, fonts and icons</dt>
+        <dd>
+          React, Zod, d3, Lucide icons (through react-icons), DM Sans, Anonymous Pro and TeX Gyre Adventor, each under its own licence.{" "}
+          {licenses === null && <button className="rt-linkbtn" onClick={showLicenses}>Show licences</button>}
+        </dd>
+        <dt>RipTide</dt>
+        <dd>Code, name and logo © 2026 Dosuka. Source available at <a href="https://github.com/DosukaSOL/RipTide" target="_blank" rel="noopener noreferrer">github.com/DosukaSOL/RipTide</a>, all rights reserved.</dd>
+      </dl>
+      {err && <p className="rt-hint" role="alert">{err}</p>}
+      {licenses !== null && <pre className="rt-licenses" tabIndex={0} aria-label="Third-party licences">{licenses}</pre>}
+    </section>
   );
 }

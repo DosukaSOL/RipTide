@@ -8,6 +8,10 @@ import { parsePlaces, TilesManifest, type PlacesData, type TilesManifest as Mani
  */
 export const MAP_BASE = "./map/leonida";
 
+declare const __MAP_ART__: boolean | undefined;
+/** False in builds made with RIPTIDE_MAP_ART=off: the map art isn't shipped, only places. */
+export const MAP_ART_BUILT: boolean = typeof __MAP_ART__ === "boolean" ? __MAP_ART__ : true;
+
 export interface MapData {
   status: "loading" | "ready" | "error";
   manifest: Manifest | null;
@@ -29,11 +33,13 @@ async function getJson(path: string): Promise<unknown> {
 
 function load(): Promise<MapData> {
   cache ??= (async (): Promise<MapData> => {
-    const [m, p] = await Promise.allSettled([getJson("manifest.json"), getJson("places.json")]);
+    const [m, p] = await Promise.allSettled([MAP_ART_BUILT ? getJson("manifest.json") : Promise.resolve(null), getJson("places.json")]);
     let manifest: Manifest | null = null;
     let places: PlacesData | null = null;
     const errors: string[] = [];
-    if (m.status === "fulfilled") {
+    if (!MAP_ART_BUILT) {
+      /* no map art in this build: the schematic background is used */
+    } else if (m.status === "fulfilled") {
       const r = TilesManifest.safeParse(m.value);
       if (r.success) manifest = r.data;
       else errors.push("map tiles");
@@ -52,7 +58,7 @@ function load(): Promise<MapData> {
       manifest,
       tiles,
       places,
-      error: errors.length ? `The ${errors.join(" and ")} couldn't be loaded. Reinstall or rebuild RipTide to restore them.` : "",
+      error: errors.length ? `The ${errors.join(" and ")} couldn't be loaded. Reinstall or rebuild RipTide to restore them.${errors.includes("places") ? "" : " The schematic grid is shown instead."}` : "",
     };
   })();
   return cache;

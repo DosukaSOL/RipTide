@@ -57,7 +57,7 @@ const openExternal = (url) => {
 };
 const fromApp = (e) => isApp(e.senderFrame?.url ?? "");
 
-const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".ttf": "font/ttf", ".otf": "font/otf", ".ico": "image/x-icon" };
+const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".ttf": "font/ttf", ".otf": "font/otf", ".ico": "image/x-icon", ".txt": "text/plain; charset=utf-8" };
 
 /* ---------- window state ---------- */
 const stateFile = () => path.join(app.getPath("userData"), "window.json");

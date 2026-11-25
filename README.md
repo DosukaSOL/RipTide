@@ -199,7 +199,7 @@ The longer version is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 **Is it free?** Yes. The preview is free to use, in your browser or on your own machine.
 
-**Is this made by Rockstar?** No. RipTide is an independent project and isn't affiliated with Rockstar Games, Take-Two or Cfx.re.
+**Is this made by Rockstar?** No. RipTide is an independent project and isn't affiliated with Rockstar Games, Take-Two or Cfx.re. "Official map" means the map Rockstar released, not that Rockstar endorses RipTide. RipTide holds no licence for that map art; [docs/legal](docs/legal/MAP_RIGHTS_DECISION.md) records how it's handled, and Settings → Map background switches it off.
 
 **Does it work with GTA VI right now?** The Interactive Map does: it uses the official map of Leonida. Everything that needs the game on PC, like benchmarks and servers, waits for GTA VI on PC, which Rockstar hasn't announced yet.
 

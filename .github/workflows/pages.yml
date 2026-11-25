@@ -27,6 +27,9 @@ jobs:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
       - run: npm test
       - run: npm run build
+        env:
+          # Set the repository variable RIPTIDE_MAP_ART to "off" to build without the map art.
+          RIPTIDE_MAP_ART: ${{ vars.RIPTIDE_MAP_ART || 'on' }}
       - run: node scripts/build-site.mjs
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:

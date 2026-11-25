@@ -27,6 +27,7 @@ import {
   PERSONAL_COLOR,
   PROVENANCE_LABEL,
   DEFAULT_VIEW,
+  EXTENT,
   categoryById,
   categoryCounts,
   cleanText,
@@ -46,6 +47,13 @@ import {
   visibleTiles,
   zoomAt,
   uid,
+  gridLabel,
+  gridLines,
+  labelled,
+  LEONIDA_BOX,
+  pickBasemap,
+  worldToScreen,
+  type Basemap,
   type CategoryId,
   type HiddenId,
   type MapFilter,
@@ -57,7 +65,7 @@ import { PageHeader, useShell } from "../ui";
 import { DetachedGuard, HeaderRight } from "./common";
 import { useToolsData } from "../data";
 import { openToolWindow } from "../windows";
-import { MAP_BASE, useMapData, type MapData } from "../mapdata";
+import { MAP_ART_BUILT, MAP_BASE, useMapData, type MapData } from "../mapdata";
 
 const mapDefault = () => MapState.parse({});
 const PROV_TONE: Record<string, string> = { official: "rt-sea", verified: "rt-sea", community: "rt-sun", personal: "rt-pink" };
@@ -68,10 +76,14 @@ const CC_BY = "https://creativecommons.org/licenses/by/4.0/";
 
 export function MapTool() {
   const { detached } = useShell();
+  const { settings } = useToolsData();
+  const art = MAP_ART_BUILT && settings.basemap === "official";
   return (
     <DetachedGuard tool="map">
       <div className="rt-page" style={detached ? { maxWidth: "none" } : undefined}>
-        <PageHeader crumb="Interactive Map" title="Find your next discovery." sub="Rockstar's official map of Leonida, with community-mapped places to find, progress to track and your own markers. Pop it out to a second screen any time." right={<HeaderRight />} />
+        <PageHeader crumb="Interactive Map" title="Find your next discovery." sub={art
+          ? "Rockstar's official map of Leonida, with community-mapped places to find, progress to track and your own markers. Pop it out to a second screen any time."
+          : "Community-mapped places of Leonida on RipTide's schematic grid, with progress to track and your own markers. Pop it out to a second screen any time."} right={<HeaderRight />} />
         <MapBody />
       </div>
     </DetachedGuard>
@@ -92,6 +104,7 @@ function MapBody() {
   const { toast, detached } = useShell();
   const { activeWorkspace, setWorkspaces, settings } = useToolsData();
   const data = useMapData();
+  const basemap = pickBasemap(settings.basemap, { artBuilt: MAP_ART_BUILT, tilesLoaded: !!data.manifest });
   const [s, set, storageError] = usePersisted(KEYS.map, MapState, mapDefault);
   const [view, setView] = useState<View>(() => clampView(s.view));
   const [placing, setPlacing] = useState(false);
@@ -413,6 +426,7 @@ function MapBody() {
         {/* ---------- Map ---------- */}
         <MapCanvas
           data={data}
+          basemap={basemap}
           view={view}
           setView={setView}
           onSize={onStageSize}
@@ -479,7 +493,8 @@ function MapBody() {
       </div>
       <div className="rt-foot-note">
         <span>
-          Map of Leonida © Rockstar Games. Places and tiles from <a href={GTADB} target="_blank" rel="noopener noreferrer">map.gtadb.org</a> (<a href={CC_BY} target="_blank" rel="noopener noreferrer">CC BY 4.0</a>), filtered by RipTide.
+          {basemap.attribution ? `${basemap.attribution} ` : "Background: RipTide's own schematic grid, no game art. "}
+          Places: GTA VI Landmarks Data by <a href={GTADB} target="_blank" rel="noopener noreferrer">gtadb.org</a> and contributors (<a href={CC_BY} target="_blank" rel="noopener noreferrer">CC BY 4.0</a>), filtered and recategorised by RipTide.
           {data.places ? ` Data from ${data.places.revisionDate}.` : ""}
         </span>
         <span>Drag to pan · scroll or +/− to zoom · N next unfound · F mark found · / to search</span>
@@ -669,6 +684,7 @@ function ProgressBlock({ s, set, total, found, onNext }: { s: MapState; set: (fn
 
 function MapCanvas(props: {
   data: MapData;
+  basemap: Basemap;
   view: View;
   setView: (fn: View | ((v: View) => View)) => void;
   onSize: (w: number, h: number) => void;
@@ -687,7 +703,7 @@ function MapCanvas(props: {
   onDeselect: () => void;
   empty: ReactNode;
 }) {
-  const { view, setView, placing, data, onSize } = props;
+  const { view, setView, placing, data, onSize, basemap } = props;
   const stage = useRef<HTMLDivElement>(null);
   const coords = useRef<HTMLSpanElement>(null);
   const [size, setSize] = useState({ w: 900, h: 640 });
@@ -786,8 +802,8 @@ function MapCanvas(props: {
     if (handled) e.preventDefault();
   };
 
-  /* tiles */
-  const manifest = data.manifest;
+  /* background: map art tiles, or RipTide's own grid */
+  const manifest = basemap.tiles ? data.manifest : null;
   const tiles = useMemo(() => {
     if (!manifest) return [];
     const exists = (z: number, key: string) => data.tiles.get(z)?.has(key) ?? false;
@@ -803,7 +819,8 @@ function MapCanvas(props: {
     <div
       ref={stage}
       className={`rt-panel rt-map-stage${dragging ? " rt-dragging" : ""}${placing ? " rt-placing" : ""}`}
-      style={{ background: manifest?.background ?? "#2f90b0" }}
+      style={{ background: manifest?.background ?? basemap.background }}
+      data-basemap={basemap.id}
       tabIndex={0}
       role="application"
       aria-roledescription="map"
@@ -817,16 +834,20 @@ function MapCanvas(props: {
       onKeyDown={onKey}
     >
       <svg className="rt-map-svg" viewBox={vb.join(" ")} preserveAspectRatio="xMidYMid meet">
-        <g className="rt-tiles" aria-hidden="true">
-          {tiles.map((t) => (
-            <image key={`${t.z}/${t.key}`} href={`${MAP_BASE}/${t.z}/${t.key}.jpg`} x={t.x0} y={-t.yTop} width={t.size * 1.002} height={t.size * 1.002} preserveAspectRatio="none" />
-          ))}
-        </g>
+        {manifest ? (
+          <g className="rt-tiles" aria-hidden="true">
+            {tiles.map((t) => (
+              <image key={`${t.z}/${t.key}`} href={`${MAP_BASE}/${t.z}/${t.key}.jpg`} x={t.x0} y={-t.yTop} width={t.size * 1.002} height={t.size * 1.002} preserveAspectRatio="none" />
+            ))}
+          </g>
+        ) : (
+          <SchematicGrid view={view} w={size.w} h={size.h} />
+        )}
         <MarkerLayer records={shown} selectedId={props.selected?.id ?? ""} found={props.found} favorites={props.favorites} scale={s} rPx={rPx} onSelect={props.onSelect} />
       </svg>
 
       <div className="rt-map-badges">
-        <span className="rt-badge">Official map of Leonida</span>
+        <span className="rt-badge">{basemap.badge}</span>
         <span className="rt-badge">{data.status === "loading" ? "Loading places…" : data.places ? `${fmt(props.records.length)} places shown` : "No place data"}</span>
       </div>
       <span className="rt-map-coords" ref={coords} aria-hidden="true" />
@@ -843,9 +864,45 @@ function MapCanvas(props: {
         <button className="rt-iconbtn" aria-label="Next unfound place" onClick={props.onNext}><LuNavigation /></button>
         <button className="rt-iconbtn" aria-label="Add a personal marker" aria-pressed={placing} style={placing ? { color: "var(--rt-pink)" } : undefined} onClick={() => (placing ? props.onCancelPlacing() : props.onStartPlacing())}><LuMapPin /></button>
       </div>
+      {!manifest && <GridLabels view={view} w={size.w} h={size.h} />}
       <div className="rt-map-credit">
-        © Rockstar Games · <a href={GTADB} target="_blank" rel="noopener noreferrer">gtadb.org</a> · <a href={CC_BY} target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
+        {basemap.attribution ? "Map © Rockstar Games · " : ""}Places: <a href={GTADB} target="_blank" rel="noopener noreferrer">gtadb.org</a>, <a href={CC_BY} target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
       </div>
+    </div>
+  );
+}
+
+/** RipTide's own background: a coordinate grid in metres. Original drawing, no game art. */
+const SchematicGrid = memo(function SchematicGrid({ view, w, h }: { view: View; w: number; h: number }) {
+  const { lines } = gridLines(view, w, h);
+  const E = EXTENT;
+  return (
+    <g className="rt-grid" aria-hidden="true">
+      {/* The land area as a plain box: coordinates only, nothing traced from the map art. */}
+      <rect x={LEONIDA_BOX.minX} y={-LEONIDA_BOX.maxY} width={LEONIDA_BOX.maxX - LEONIDA_BOX.minX} height={LEONIDA_BOX.maxY - LEONIDA_BOX.minY} className="rt-grid-frame" vectorEffect="non-scaling-stroke" />
+      {lines.map((l) =>
+        l.axis === "x" ? (
+          <line key={`x${l.at}`} x1={l.at} x2={l.at} y1={-E} y2={E} className={l.at === 0 ? "rt-grid-axis" : l.major ? "rt-grid-major" : "rt-grid-minor"} vectorEffect="non-scaling-stroke" />
+        ) : (
+          <line key={`y${l.at}`} y1={-l.at} y2={-l.at} x1={-E} x2={E} className={l.at === 0 ? "rt-grid-axis" : l.major ? "rt-grid-major" : "rt-grid-minor"} vectorEffect="non-scaling-stroke" />
+        ),
+      )}
+    </g>
+  );
+});
+
+/** Kilometre labels along the top and left edges of the schematic grid. */
+function GridLabels({ view, w, h }: { view: View; w: number; h: number }) {
+  const { step, lines } = gridLines(view, w, h);
+  const majors = lines.filter((l) => labelled(l, step));
+  return (
+    <div className="rt-grid-labels" aria-hidden="true">
+      {majors.map((l) => {
+        const p = worldToScreen(view, l.axis === "x" ? l.at : 0, l.axis === "y" ? l.at : 0, w, h);
+        // Keep clear of the badges (top left), coordinates (top right), credit and zoom buttons.
+        if (l.axis === "x") return p.px < 48 || p.px > w - 48 ? null : <span key={`x${l.at}`} className="rt-gx" style={{ left: p.px, top: 54 }}>{gridLabel(l.at)}</span>;
+        return p.py < 84 || p.py > h - 44 ? null : <span key={`y${l.at}`} className="rt-gy" style={{ top: p.py, left: 12 }}>{gridLabel(l.at)}</span>;
+      })}
     </div>
   );
 }

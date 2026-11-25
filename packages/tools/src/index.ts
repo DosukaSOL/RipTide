@@ -7,3 +7,4 @@ export * from "./ids";
 export * from "./roadmap";
 export * from "./merge";
 export * from "./backup";
+export * from "./basemap";

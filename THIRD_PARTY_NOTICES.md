@@ -10,6 +10,8 @@ Files: `apps/studio/assets/map/leonida/`
 
 The map of Leonida is © Rockstar Games, from the official map Rockstar released as a free download on 19 November 2026. The tiles were prepared by [gtadb.org](https://map.gtadb.org) and are bundled unchanged at zoom levels 0 to 4.
 
+RipTide holds no licence from Rockstar or Take-Two for this artwork, and gtadb.org's CC BY licence below covers only gtadb.org's own data. The decision about it is recorded in [docs/legal/MAP_RIGHTS_DECISION.md](docs/legal/MAP_RIGHTS_DECISION.md). Builds made with `RIPTIDE_MAP_ART=off` leave the art out, and anyone can switch it off in Settings → Map background; places and progress don't depend on it.
+
 RipTide is not affiliated with, endorsed by or sponsored by Rockstar Games or Take-Two Interactive. If you're a rights holder and want this changed, please open an issue or use the private security report on GitHub to reach the maintainer.
 
 ### Place data
@@ -28,6 +30,12 @@ Files: `apps/studio/public/fonts/`
 
 - DM Sans and Anonymous Pro: SIL Open Font License 1.1
 - TeX Gyre Adventor: GUST Font License
+
+The full licence texts ship with the app in `THIRD_PARTY_LICENSES.txt` (Help → About and credits → Show licences).
+
+## Code and icons
+
+The app bundles React, React DOM, Scheduler, Zod, d3 and react-icons (MIT, ISC and BSD licences), with icons from [Lucide](https://lucide.dev) (ISC; icons derived from Feather are MIT). The build lists every bundled package and its licence text in `THIRD_PARTY_LICENSES.txt`, and fails if one is missing.
 
 ## Desktop app
 

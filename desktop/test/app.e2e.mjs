@@ -77,10 +77,13 @@ await step("the page has no Node access and no internet", async () => {
   assert.equal(blocked, true);
 });
 
-await step("the map loads its tiles and places from inside the app", async () => {
+await step("the map loads its background and places from inside the app", async () => {
   await go(win, "#/map");
   await win.getByText(/places shown/).waitFor({ timeout: 20000 });
-  await win.waitForFunction(() => [...document.querySelectorAll(".rt-tiles image")].length > 0);
+  // Builds made with RIPTIDE_MAP_ART=off draw RipTide's own grid instead of map tiles.
+  const basemap = await win.locator(".rt-map-stage").getAttribute("data-basemap");
+  if (basemap === "official") await win.waitForFunction(() => [...document.querySelectorAll(".rt-tiles image")].length > 0);
+  else await win.locator(".rt-grid").waitFor({ state: "attached" });
 });
 
 await step("changes are written to files on disk", async () => {

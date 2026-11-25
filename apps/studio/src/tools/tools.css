@@ -317,6 +317,17 @@
 .rt-map-center { position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; pointer-events: none; padding: 20px; }
 .rt-map-center > * { pointer-events: auto; }
 .rt-map-stage svg image { image-rendering: auto; }
+/* Schematic background: RipTide's own coordinate grid, used when the map art is off. */
+.rt-map-stage[data-basemap="schematic"] { background: radial-gradient(120% 90% at 50% 40%, #1c1638 0%, #151029 70%, #120e23 100%) !important; }
+.rt-grid line, .rt-grid rect { fill: none; stroke-width: 1; }
+.rt-grid-minor { stroke: rgba(166, 157, 201, .11); }
+.rt-grid-major { stroke: rgba(166, 157, 201, .26); }
+.rt-grid-axis { stroke: rgba(61, 242, 208, .32); }
+.rt-grid-frame { stroke: rgba(255, 179, 107, .22); stroke-dasharray: 6 6; }
+.rt-grid-labels { position: absolute; inset: 0; pointer-events: none; z-index: 1; font: 500 10.5px/1 var(--rt-code); color: rgba(213, 204, 230, .5); font-variant-numeric: tabular-nums; }
+.rt-grid-labels span { position: absolute; white-space: nowrap; }
+.rt-grid-labels .rt-gx { transform: translateX(-50%); }
+.rt-grid-labels .rt-gy { transform: translateY(-50%); }
 .rt-marker { cursor: pointer; }
 .rt-marker:focus { outline: none; }
 .rt-marker:hover > circle:nth-of-type(2), .rt-marker:hover > rect { stroke: #F4E9DC; }
@@ -494,3 +505,15 @@
 /* ---------- ViceLab capture notes ---------- */
 .rt-notes { margin: 12px 0 0; padding: 12px 16px 12px 34px; border: 1px solid var(--rt-line); border-radius: 12px; color: var(--rt-sub); font-size: 13.5px; line-height: 1.5; }
 .rt-notes li + li { margin-top: 4px; }
+
+/* About and credits (Help) */
+.rt-notice { padding: 12px 14px; border: 1px solid var(--rt-line-2); border-left: 3px solid var(--rt-sea); border-radius: 10px; color: var(--rt-sub); font-size: 14px; line-height: 1.55; max-width: 78ch; }
+.rt-credits { display: grid; grid-template-columns: minmax(140px, 200px) 1fr; gap: 10px 20px; margin: 0; font-size: 14px; line-height: 1.6; max-width: 980px; }
+.rt-credits dt { color: var(--rt-sand); font-weight: 600; }
+.rt-credits dd { margin: 0; color: var(--rt-sub); max-width: 78ch; }
+.rt-credits a { color: var(--rt-sand); }
+.rt-linkbtn { padding: 0; border: 0; background: none; color: var(--rt-sea); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.rt-linkbtn:focus-visible { outline: 2px solid var(--rt-sea); outline-offset: 2px; border-radius: 3px; }
+.rt-licenses { margin: 16px 0 0; max-height: 360px; overflow: auto; padding: 14px 16px; border: 1px solid var(--rt-line); border-radius: 10px; background: #110e20; color: var(--rt-sub); font: 12px/1.55 var(--rt-code); white-space: pre-wrap; }
+.rt-licenses:focus-visible { outline: 2px solid var(--rt-sea); outline-offset: 2px; }
+@media (max-width: 720px) { .rt-credits { grid-template-columns: 1fr; } .rt-credits dd { margin-bottom: 8px; } }

@@ -6,6 +6,8 @@ import { moduleById } from "../registry";
 import { useOpenWindowsList } from "../ToolsApp";
 import { focusTool } from "../windows";
 import { RestoreBanner } from "./Workspaces";
+import { useToolsData } from "../data";
+import { MAP_ART_BUILT } from "../mapdata";
 
 const CARDS: { id: ToolId; icon: typeof LuMap; title: string; body: string; badge: string; tone?: "sea"; cta: string; feature?: boolean }[] = [
   { id: "studio", icon: LuLayoutPanelLeft, title: "RipTide Studio", body: "Design and validate a community server without code, then export its FiveM server.cfg.", badge: "FiveM config", tone: "sea", cta: "Open Studio", feature: true },
@@ -42,6 +44,9 @@ export function Home() {
   const windows = useOpenWindowsList();
   const running = mounted.filter((t) => moduleById(t).tool && t !== active);
   const total = running.length + windows.length;
+  const { settings } = useToolsData();
+  const art = MAP_ART_BUILT && settings.basemap === "official";
+  const cards = CARDS.map((c) => (c.id === "map" && !art ? { ...c, body: "Find Leonida's places, track what you've found and add your own markers on a schematic grid.", badge: "Places" } : c));
 
   return (
     <div className="rt-page">
@@ -55,7 +60,7 @@ export function Home() {
             <span>All tools, one workspace</span>
           </div>
           <div className="rt-cards">
-            {CARDS.map((c) => {
+            {cards.map((c) => {
               const Icon = c.icon;
               return (
                 <a key={c.id} className={`rt-card${c.feature ? " rt-feature" : ""}`} href={c.id === "studio" ? "#/studio" : `#/${c.id}`} onClick={(e) => (e.preventDefault(), go(c.id))}>

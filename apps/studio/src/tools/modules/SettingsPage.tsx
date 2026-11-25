@@ -3,12 +3,13 @@ import { LuDownload, LuUpload, LuRotateCcw, LuFolderOpen, LuHardDrive, LuGlobe }
 import { commitKeys, desktopBridge, desktopWriteFailed } from "../../desktop";
 import { z } from "zod";
 import { Blueprint } from "@riptide/core";
-import { applyRestore, BACKUP_MAX_BYTES, createBackup, Flags, HeistState, KEYS, LEGACY_KEYS, MapState, planRestore, Settings, ViceLabState, WorkspacesState, type BackupPart, type RestorePlan } from "@riptide/tools";
+import { applyRestore, availableBasemaps, BACKUP_MAX_BYTES, createBackup, Flags, HeistState, KEYS, LEGACY_KEYS, MapState, planRestore, Settings, ViceLabState, WorkspacesState, type BackupPart, type RestorePlan } from "@riptide/tools";
 import { PageHeader, SettingRow, Switch, useShell } from "../ui";
 import { HeaderRight } from "./common";
 import { readFlags, useToolsData, writeFlags } from "../data";
 import { downloadText, readFileText } from "../persist";
 import { UpdatesPanel } from "../Updates";
+import { MAP_ART_BUILT } from "../mapdata";
 
 /** Everything RipTide keeps on this device, by owner, with the schema each part must pass to be restored. */
 const DATA_KEYS: BackupPart[] = [
@@ -110,6 +111,17 @@ export function SettingsPage() {
           </SettingRow>
           <SettingRow title="Startup animation" hint="The logo builds itself when RipTide opens">
             <Switch label="Startup animation" checked={settings.splash} onChange={(v) => setSettings((d) => void (d.splash = v))} />
+          </SettingRow>
+          <SettingRow
+            title="Map background"
+            hint={MAP_ART_BUILT
+              ? "Map art: Rockstar's map of Leonida. Schematic grid: RipTide's own grid, no game art. Your places, markers and progress stay the same."
+              : "This copy of RipTide doesn't include map art, so the map uses RipTide's own schematic grid. Your places, markers and progress are unaffected."}
+          >
+            <label className="rt-sr" htmlFor="rt-basemap">Map background</label>
+            <select id="rt-basemap" className="rt-select" style={{ width: 170, height: 36 }} value={MAP_ART_BUILT ? settings.basemap : "schematic"} disabled={!MAP_ART_BUILT} onChange={(e) => setSettings((d) => void (d.basemap = e.target.value as Settings["basemap"]))}>
+              {availableBasemaps(MAP_ART_BUILT).map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
+            </select>
           </SettingRow>
           <SettingRow title="RipTide Tools shell" hint="Preview. Turn off to go back to the classic Studio">
             <Switch label="RipTide Tools shell" checked onChange={() => {
