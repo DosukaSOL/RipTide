@@ -1,7 +1,7 @@
 {
   "name": "riptide-desktop",
   "productName": "RipTide Tools",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "RipTide Tools for your desktop: every tool for your GTA life, saved as files on your computer.",
   "main": "main.cjs",
   "private": true,
