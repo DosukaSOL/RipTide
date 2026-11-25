@@ -111,7 +111,7 @@ await check("?shell=tools turns the shell on and remembers it", async () => {
 await check("every module opens from the sidebar without errors", async () => {
   const { ctx, page, errors } = await fresh();
   await page.goto(tools("home"));
-  for (const id of ["studio", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help", "home"]) {
+  for (const id of ["today", "studio", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help", "home"]) {
     await page.click(`.rt-navitem[data-tool="${id}"]`);
     await page.waitForSelector(`section[data-module="${id}"]:not([hidden])`);
     assert.equal(await page.locator(`.rt-navitem[data-tool="${id}"]`).getAttribute("aria-current"), "page");
@@ -432,13 +432,109 @@ await check("keyboard: map pans and zooms, Alt+number switches tools, focus is v
   await page.keyboard.press("/");
   assert.equal(await page.evaluate(() => document.activeElement?.id), "rt-map-q");
   await page.locator(".rt-map-stage").focus(); // tool shortcuts are ignored while typing
-  await page.keyboard.press("Alt+3");
+  await page.keyboard.press("Alt+4");
   await page.waitForFunction(() => location.hash === "#/vicelab");
   await page.goto(tools("home"));
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   const outline = await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);
   assert.notEqual(outline, "none", "focus ring visible");
+  await ctx.close();
+});
+
+console.log("\nToday");
+await check("today: map places become goals, a session is planned, ticked off and summed up", async () => {
+  const { ctx, page, errors } = await fresh();
+  const addFromMap = async (q, option) => {
+    await page.fill("#rt-map-q", q);
+    await page.getByRole("option", { name: option }).first().click();
+    await page.getByRole("button", { name: "Add to Today" }).click();
+    await page.getByRole("button", { name: "In Today" }).waitFor();
+  };
+  await page.goto(tools("map"));
+  await page.getByText(/places shown/).waitFor();
+  await addFromMap("Y Vice City", /Y Vice City.*Safehouse/);
+  await addFromMap("Vice Beach Marina", /Vice Beach Marina/);
+  await addFromMap("Albany Hotel", /Albany Hotel/);
+  await page.getByRole("button", { name: "Start a route" }).click();
+  await page.locator(".rt-route-badge").waitFor();
+  await page.click('.rt-navitem[data-tool="today"]');
+  await page.getByRole("heading", { name: "Plan your next session." }).waitFor();
+  // A goal of the player's own, with their estimate.
+  await page.fill("#rt-td-new", "Photograph the sunset from the pier");
+  await page.selectOption("#rt-td-type", "photo");
+  await page.fill("#rt-td-mins", "20");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.locator(".rt-td-goals").getByText("Photograph the sunset from the pier").waitFor();
+  // 30 minutes: three 10-minute map goals fit, the 20-minute photo doesn't.
+  await page.getByRole("button", { name: /^30\s*min$/ }).click();
+  const queue = page.locator(".rt-td-queue > li");
+  await page.waitForFunction(() => document.querySelectorAll(".rt-td-queue > li").length === 3);
+  await page.getByText("1 more open goal didn't fit in 30 minutes.").waitFor();
+  assert.match(await queue.first().innerText(), /rough/);
+  assert.ok((await page.locator(".rt-td-why").allInnerTexts()).some((t) => /straight line/.test(t)));
+  // Save the suggestion as a route, then run the session.
+  await page.getByRole("button", { name: "Save as route" }).click();
+  await page.locator(".rt-td-routes").getByText(/Session route/).waitFor();
+  await page.getByRole("button", { name: "Start session" }).click();
+  await page.getByRole("heading", { name: "Session in progress" }).waitFor();
+  await page.locator(".rt-td-check input[type=checkbox]").first().check();
+  await page.getByText("1 of 3 done").waitFor();
+  await page.fill("#rt-td-notes", "Marina was closed");
+  await page.waitForTimeout(400);
+  await page.reload();
+  await page.getByRole("heading", { name: "Session in progress" }).waitFor();
+  assert.equal(await page.inputValue("#rt-td-notes"), "Marina was closed", "notes survive a reload");
+  await page.getByRole("button", { name: "Finish session" }).click();
+  await page.getByRole("heading", { name: "Session finished" }).waitFor();
+  await page.getByText("Still open").waitFor();
+  await page.getByRole("button", { name: "Plan the next one" }).click();
+  // The finished goal isn't suggested again; with an hour, everything left fits.
+  await page.getByRole("button", { name: /^60\s*min$/ }).click();
+  await page.waitForFunction(() => document.querySelectorAll(".rt-td-queue > li").length === 3);
+  assert.ok((await queue.allInnerTexts()).some((t) => /Photograph the sunset/.test(t)));
+  // The route is drawn on the map, on either background, at the same places.
+  await page.click('.rt-navitem[data-tool="map"]');
+  await page.waitForFunction(() => document.querySelectorAll(".rt-route-stop").length >= 3);
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem("riptide.journey.v1")).objectives.map((o) => [o.id, o.place?.x, o.place?.y]));
+  await page.goto(tools("settings"));
+  await page.selectOption("#rt-basemap", "schematic");
+  await page.goto(tools("map"));
+  await page.locator(".rt-grid").waitFor({ state: "attached" });
+  await page.waitForFunction(() => document.querySelectorAll(".rt-route-stop").length >= 3);
+  const after = await page.evaluate(() => JSON.parse(localStorage.getItem("riptide.journey.v1")).objectives.map((o) => [o.id, o.place?.x, o.place?.y]));
+  assert.deepEqual(after, before, "changing the background doesn't move goals");
+  await page.getByRole("button", { name: "Hide the route" }).click();
+  assert.equal(await page.locator(".rt-route-stop").count(), 0);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("today: a route can be reordered, shortened and downloaded", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(tools("map"));
+  await page.getByText(/places shown/).waitFor();
+  for (const [q, o] of [["Y Vice City", /Y Vice City.*Safehouse/], ["Albany Hotel", /Albany Hotel/], ["Vice Beach Marina", /Vice Beach Marina/]]) {
+    await page.fill("#rt-map-q", q);
+    await page.getByRole("option", { name: o }).first().click();
+    await page.getByRole("button", { name: /Start a route|Add to route/ }).click();
+  }
+  await page.click('.rt-navitem[data-tool="today"]');
+  await page.getByRole("button", { name: /Route 1/ }).click();
+  const stops = () => page.locator(".rt-td-stops .rt-td-stop").allInnerTexts();
+  const first = await stops();
+  assert.equal(first.length, 3);
+  await page.getByRole("button", { name: `Move ${first[1]} up` }).click();
+  assert.deepEqual(await stops(), [first[1], first[0], first[2]]);
+  await page.getByRole("button", { name: "Shorten the order" }).click();
+  await page.getByText(/Reordered: .* in straight lines/).waitFor();
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download" }).click();
+  const file = JSON.parse(await readFile(await (await dl).path(), "utf8"));
+  assert.equal(file.format, "riptide-route");
+  assert.equal(file.method, "straight-line");
+  assert.equal(file.stops.length, 3);
+  assert.deepEqual(errors, []);
   await ctx.close();
 });
 
@@ -721,7 +817,7 @@ const SIZES = [
 for (const s of SIZES) {
   await check(`${s.name}: every tool fits with no sideways scrolling`, async () => {
     const { ctx, page, errors } = await fresh(s.vp, s.dpr);
-    for (const id of ["home", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help", "studio"]) {
+    for (const id of ["home", "today", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help", "studio"]) {
       await page.goto(tools(id));
       await page.waitForSelector(`section[data-module="${id}"]:not([hidden])`);
       await page.waitForTimeout(250);

@@ -10,6 +10,8 @@ import {
   LuX,
   LuUpload,
   LuStar,
+  LuSunrise,
+  LuRoute,
   LuTrash2,
   LuMapPin,
   LuFilter,
@@ -53,7 +55,15 @@ import {
   LEONIDA_BOX,
   pickBasemap,
   worldToScreen,
+  JourneyState,
+  createObjective,
+  formatDistance,
+  pathLength,
+  placeRef,
+  typeForCategory,
+  ROUTE_METHOD,
   type Basemap,
+  type Route,
   type CategoryId,
   type HiddenId,
   type MapFilter,
@@ -68,6 +78,7 @@ import { openToolWindow } from "../windows";
 import { MAP_ART_BUILT, MAP_BASE, useMapData, type MapData } from "../mapdata";
 
 const mapDefault = () => MapState.parse({});
+const journeyDefault = () => JourneyState.parse({});
 const PROV_TONE: Record<string, string> = { official: "rt-sea", verified: "rt-sea", community: "rt-sun", personal: "rt-pink" };
 const colorOf = (r: Pick<MapRecord, "category">) => categoryById(r.category)?.color ?? PERSONAL_COLOR;
 const fmt = (n: number) => n.toLocaleString("en-US");
@@ -106,6 +117,8 @@ function MapBody() {
   const data = useMapData();
   const basemap = pickBasemap(settings.basemap, { artBuilt: MAP_ART_BUILT, tilesLoaded: !!data.manifest });
   const [s, set, storageError] = usePersisted(KEYS.map, MapState, mapDefault);
+  const [journey, setJourney] = usePersisted(KEYS.journey, JourneyState, journeyDefault);
+  const shownRoute = journey.routes.find((r) => r.id === journey.shownRouteId);
   const [view, setView] = useState<View>(() => clampView(s.view));
   const [placing, setPlacing] = useState(false);
   const [packErr, setPackErr] = useState("");
@@ -427,6 +440,8 @@ function MapBody() {
         <MapCanvas
           data={data}
           basemap={basemap}
+          route={shownRoute}
+          onHideRoute={() => setJourney((d) => void (d.shownRouteId = ""))}
           view={view}
           setView={setView}
           onSize={onStageSize}
@@ -471,6 +486,26 @@ function MapBody() {
                 onDelete={() => set((d) => { d.markers = d.markers.filter((m) => m.id !== selected.id); d.favorites = d.favorites.filter((f) => f !== selected.id); d.selectedId = ""; })}
                 onClose={() => select("")}
                 toast={toast}
+                inToday={journey.objectives.some((o) => o.place?.placeId === selected.id && o.status !== "done" && o.profileId === s.activeProfile)}
+                onToday={() => {
+                  setJourney((d) => void d.objectives.push(createObjective({ title: selected.title, type: typeForCategory(selected.category), place: placeRef(selected), profileId: s.activeProfile })));
+                  toast("Added to Today");
+                }}
+                routeName={shownRoute?.name ?? ""}
+                onRoute={() => {
+                  const stop = placeRef(selected);
+                  setJourney((d) => {
+                    let r = d.routes.find((x) => x.id === d.shownRouteId);
+                    if (!r) {
+                      r = { id: uid(), profileId: s.activeProfile, name: `Route ${d.routes.length + 1}`, stops: [], method: ROUTE_METHOD, map: stop.map, createdAt: Date.now(), revision: 0 };
+                      d.routes.push(r);
+                      d.shownRouteId = r.id;
+                    }
+                    if (r.stops.length < 60) r.stops.push(stop);
+                    r.revision++;
+                  });
+                  toast(shownRoute ? `Added to ${shownRoute.name}` : "Started a new route with this stop");
+                }}
               />
             ) : (
               <div className="rt-details-empty">
@@ -685,6 +720,8 @@ function ProgressBlock({ s, set, total, found, onNext }: { s: MapState; set: (fn
 function MapCanvas(props: {
   data: MapData;
   basemap: Basemap;
+  route?: Route;
+  onHideRoute: () => void;
   view: View;
   setView: (fn: View | ((v: View) => View)) => void;
   onSize: (w: number, h: number) => void;
@@ -750,7 +787,7 @@ function MapCanvas(props: {
   };
 
   const onDown = (e: PointerEvent) => {
-    if (e.button !== 0 || (e.target as Element).closest(".rt-marker, .rt-map-zoom, .rt-empty, .rt-map-credit a")) return;
+    if (e.button !== 0 || (e.target as Element).closest(".rt-marker, .rt-map-zoom, .rt-empty, .rt-map-credit a, .rt-route-badge")) return;
     drag.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
     stage.current?.setPointerCapture?.(e.pointerId);
   };
@@ -843,12 +880,19 @@ function MapCanvas(props: {
         ) : (
           <SchematicGrid view={view} w={size.w} h={size.h} />
         )}
+        {props.route && props.route.stops.length > 0 && <RouteLayer route={props.route} scale={s} />}
         <MarkerLayer records={shown} selectedId={props.selected?.id ?? ""} found={props.found} favorites={props.favorites} scale={s} rPx={rPx} onSelect={props.onSelect} />
       </svg>
 
       <div className="rt-map-badges">
         <span className="rt-badge">{basemap.badge}</span>
         <span className="rt-badge">{data.status === "loading" ? "Loading places…" : data.places ? `${fmt(props.records.length)} places shown` : "No place data"}</span>
+        {props.route && (
+          <span className="rt-badge rt-sun rt-route-badge">
+            {props.route.name} · {formatDistance(pathLength(props.route.stops))} in straight lines
+            <button className="rt-link" aria-label="Hide the route" onClick={props.onHideRoute}><LuX /></button>
+          </span>
+        )}
       </div>
       <span className="rt-map-coords" ref={coords} aria-hidden="true" />
       {props.empty && <div className="rt-map-center">{props.empty}</div>}
@@ -871,6 +915,21 @@ function MapCanvas(props: {
     </div>
   );
 }
+
+/** A saved route: straight dashed lines between numbered stops. Never shown as a road path. */
+const RouteLayer = memo(function RouteLayer({ route, scale }: { route: Route; scale: number }) {
+  return (
+    <g className="rt-route" aria-hidden="true">
+      <polyline className="rt-route-line" points={route.stops.map((p) => `${p.x},${-p.y}`).join(" ")} vectorEffect="non-scaling-stroke" />
+      {route.stops.map((p, i) => (
+        <g key={`${p.placeId}-${i}`} className="rt-route-stop" transform={`translate(${p.x} ${-p.y}) scale(${1 / scale})`}>
+          <circle r={11} vectorEffect="non-scaling-stroke" />
+          <text>{i + 1}</text>
+        </g>
+      ))}
+    </g>
+  );
+});
 
 /** RipTide's own background: a coordinate grid in metres. Original drawing, no game art. */
 const SchematicGrid = memo(function SchematicGrid({ view, w, h }: { view: View; w: number; h: number }) {
@@ -953,6 +1012,10 @@ const MarkerLayer = memo(function MarkerLayer({ records, selectedId, found, favo
 
 function Details(props: {
   record: MapRecord;
+  inToday: boolean;
+  onToday: () => void;
+  routeName: string;
+  onRoute: () => void;
   found: boolean;
   favorite: boolean;
   onFound: () => void;
@@ -1042,6 +1105,8 @@ function Details(props: {
         <button className="rt-btn rt-sm" aria-pressed={props.favorite} onClick={props.onFavorite}>
           <LuStar style={props.favorite ? { color: "var(--rt-sun)", fill: "var(--rt-sun)" } : undefined} />{props.favorite ? "Favourite" : "Add to favourites"}
         </button>
+        <button className="rt-btn rt-sm" disabled={props.inToday} onClick={props.onToday}><LuSunrise />{props.inToday ? "In Today" : "Add to Today"}</button>
+        <button className="rt-btn rt-sm" onClick={props.onRoute} title={props.routeName ? `Adds this place to ${props.routeName}` : "Starts a new route"}><LuRoute />{props.routeName ? "Add to route" : "Start a route"}</button>
         {personal && <button className="rt-btn rt-sm rt-danger" onClick={props.onDelete}><LuTrash2 />Delete</button>}
       </div>
       {record.source === "gtadb" && (

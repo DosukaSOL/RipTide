@@ -218,5 +218,12 @@ if (process.platform !== "win32" && process.getuid?.() !== 0) {
     }
   });
 }
+await step("a goal added in Today is saved to disk", async () => {
+  await go(win, "#/today");
+  await win.fill("#rt-td-new", "Find the lighthouse");
+  await win.getByRole("button", { name: "Add", exact: true }).click();
+  await win.waitForTimeout(600);
+  assert.match(readFileSync(join(dataDir, "riptide.journey.v1.json"), "utf8"), /Find the lighthouse/);
+});
 await closeApp(app);
 console.log(`\n${passed} desktop checks passed (data in ${dataDir})`);

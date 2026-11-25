@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { LuHouse, LuLayoutPanelLeft, LuChartLine, LuUsers, LuMap, LuMonitor, LuBookOpen, LuSettings, LuCircleHelp } from "react-icons/lu";
+import { LuSunrise, LuHouse, LuLayoutPanelLeft, LuChartLine, LuUsers, LuMap, LuMonitor, LuBookOpen, LuSettings, LuCircleHelp } from "react-icons/lu";
 import type { ToolId } from "@riptide/tools";
 import { Home } from "./modules/Home";
 import { StudioModule } from "./modules/StudioModule";
@@ -10,6 +10,7 @@ import { Workspaces } from "./modules/Workspaces";
 import { Roadmap } from "./modules/Roadmap";
 import { SettingsPage } from "./modules/SettingsPage";
 import { Help } from "./modules/Help";
+import { Today } from "./modules/Today";
 
 export interface ToolModule {
   id: ToolId;
@@ -28,6 +29,7 @@ export interface ToolModule {
 /** Adding a tool means adding one entry here. */
 export const MODULES: ToolModule[] = [
   { id: "home", label: "Home", icon: LuHouse, group: "workspace", component: Home },
+  { id: "today", label: "Today", icon: LuSunrise, group: "workspace", component: Today, tag: "NEW" },
   { id: "studio", label: "RipTide Studio", icon: LuLayoutPanelLeft, group: "workspace", component: StudioModule, tag: "READY", tool: true, flush: true },
   { id: "vicelab", label: "ViceLab", icon: LuChartLine, group: "workspace", component: ViceLab, tool: true },
   { id: "heist", label: "Heist Ops", icon: LuUsers, group: "workspace", component: HeistOps, tool: true },

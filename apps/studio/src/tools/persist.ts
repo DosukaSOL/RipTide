@@ -45,6 +45,8 @@ function load<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, fallb
  *   window's unsaved changes (see merge3) instead of one overwriting the other.
  * - If storage is full or blocked, the app keeps working in memory and says so.
  */
+const LOCAL_SAVE = "riptide:saved";
+
 export function usePersisted<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, fallback: () => T) {
   const [initial] = useState(() => load(key, schema, fallback));
   const [state, setState] = useState<T>(initial.value);
@@ -55,6 +57,8 @@ export function usePersisted<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, 
   const base = useRef<T>(initial.value);
   /** State waiting to be written, so it can be saved at once if the page closes. */
   const pending = useRef<T | null>(null);
+  /** Tells other users of the same key in this window apart from this one. */
+  const self = useRef<object>({});
 
   const write = useCallback(
     (value: T) => {
@@ -73,9 +77,12 @@ export function usePersisted<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, 
             }
           }
         }
-        localStorage.setItem(key, JSON.stringify(out));
+        const text = JSON.stringify(out);
+        localStorage.setItem(key, text);
         base.current = out;
         setError("");
+        // Storage events only reach other windows: tell other tools in this window too.
+        window.dispatchEvent(new CustomEvent(LOCAL_SAVE, { detail: { key, text, from: self.current } }));
       } catch (e) {
         setError(
           e instanceof Error && e.name === "DiskWriteError"
@@ -123,9 +130,8 @@ export function usePersisted<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, 
   }, [write]);
 
   useEffect(() => {
-    const on = (e: StorageEvent) => {
-      if (e.key !== key && e.key !== null) return;
-      const remote = parseStored(e.key === null ? null : e.newValue, schema);
+    const apply = (newValue: string | null) => {
+      const remote = parseStored(newValue, schema);
       if (remote.status === "invalid") return; // never adopt damaged data from elsewhere
       const theirs = remote.status === "ok" ? remote.value : fallback(); // empty: reset in another window
       const mine = pending.current;
@@ -143,8 +149,20 @@ export function usePersisted<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, 
       external.current = true;
       setState(theirs);
     };
+    const on = (e: StorageEvent) => {
+      if (e.key !== key && e.key !== null) return;
+      apply(e.key === null ? null : e.newValue);
+    };
+    const onLocal = (e: Event) => {
+      const d = (e as CustomEvent<{ key: string; text: string; from: object }>).detail;
+      if (d?.key === key && d.from !== self.current) apply(d.text);
+    };
     window.addEventListener("storage", on);
-    return () => window.removeEventListener("storage", on);
+    window.addEventListener(LOCAL_SAVE, onLocal);
+    return () => {
+      window.removeEventListener("storage", on);
+      window.removeEventListener(LOCAL_SAVE, onLocal);
+    };
   }, [key, schema, fallback]);
 
   const update = useCallback((fn: (draft: T) => void | T) => {

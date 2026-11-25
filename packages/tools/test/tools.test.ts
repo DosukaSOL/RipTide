@@ -710,3 +710,82 @@ test("every bundled package's licence is checked and shipped", async () => {
   assert.ok(packages.every((p) => ALLOWED.has(p.license) && p.text.length > 100));
   assert.ok(!ALLOWED.has("GPL-3.0") && !ALLOWED.has("AGPL-3.0"));
 });
+
+/* ---------- Today: routes and suggestions ---------- */
+import { dist, formatDistance, orderStops, pathLength } from "../src/routes";
+import { createObjective, debrief, exportRoute, JourneyState, lastFinishedPlace, optimiseRoute, placeRef, suggest, typeForCategory, type Objective } from "../src/journey";
+
+test("route ordering is deterministic, never longer than the input order, and respects anchors", () => {
+  // A zig-zag that nearest neighbour + 2-opt straightens into a line.
+  const pts = [0, 4, 1, 3, 2].map((k) => ({ x: k * 1000, y: (k % 2) * 10 }));
+  const order = orderStops(pts);
+  assert.deepEqual(order, orderStops(pts), "same input, same order");
+  assert.equal(new Set(order).size, pts.length);
+  const len = pathLength(order.map((i) => pts[i]!));
+  assert.ok(len <= pathLength(pts));
+  assert.ok(Math.abs(len - 4000) < 50, `straight line, got ${len}`);
+  // From a start point, the nearest stop comes first.
+  assert.equal(orderStops(pts, { start: { x: 4100, y: 0 } })[0], 1);
+  // Anchors stay put.
+  const anchored = orderStops(pts, { keepFirst: true, keepLast: true });
+  assert.equal(anchored[0], 0);
+  assert.equal(anchored.at(-1), 4);
+  // 2-opt fixes a crossing nearest neighbour leaves behind.
+  const square = [{ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 10, y: 0 }, { x: 0, y: 10 }];
+  const sq = orderStops(square).map((i) => square[i]!);
+  assert.ok(pathLength(sq) <= 30 + 1e-9);
+  assert.deepEqual(orderStops([]), []);
+  assert.equal(dist({ x: 0, y: 0 }, { x: 3, y: 4 }), 5);
+  assert.equal(formatDistance(843), "840 m");
+  assert.equal(formatDistance(3420), "3.4 km");
+});
+
+const goal = (o: Partial<Objective> & { title: string }, t: number): Objective => ({ ...createObjective({ profileId: "main", ...o }, t), ...o });
+
+test("suggestions only use the player's own open goals, fit the time, and say why", () => {
+  const a = goal({ title: "Garage A", type: "vehicle", priority: "high", place: placeRef({ id: "P1", title: "Garage A", x: 0, y: 0 }) }, 1);
+  const b = goal({ title: "Photo spot", type: "photo", estimateMin: 25, place: placeRef({ id: "P2", title: "Pier", x: 5000, y: 0 }) }, 2);
+  const c = goal({ title: "Near A", type: "discover", place: placeRef({ id: "P3", title: "Diner", x: 200, y: 0 }) }, 3);
+  const done = goal({ title: "Old", status: "done", completedAt: 10, place: placeRef({ id: "P4", title: "Bar", x: 100, y: 0 }) }, 4);
+  const other = goal({ title: "Other run", profileId: "second" }, 5);
+  const plan = suggest([a, b, c, done, other], { profileId: "main", budgetMin: 30, focus: ["discover"] });
+  const ids = plan.picks.map((p) => p.objective.title);
+  assert.ok(!ids.includes("Old") && !ids.includes("Other run"));
+  assert.ok(plan.totalMin <= 30);
+  assert.deepEqual(new Set(ids), new Set(["Garage A", "Near A"]), "the 25-minute photo doesn't fit after the higher-value goals");
+  assert.equal(plan.leftOut, 1);
+  const ga = plan.picks.find((p) => p.objective.title === "Garage A")!;
+  assert.ok(ga.reasons.includes("High priority"));
+  assert.equal(ga.minutesFrom, "rough");
+  assert.ok(plan.picks.find((p) => p.objective.title === "Near A")!.reasons.some((r) => /chose discover/.test(r)));
+  assert.ok(plan.picks.some((p) => p.reasons.some((r) => /straight line/.test(r))));
+  // Deterministic.
+  assert.deepEqual(suggest([a, b, c], { profileId: "main", budgetMin: 30 }).picks.map((p) => p.objective.id), suggest([c, b, a], { profileId: "main", budgetMin: 30 }).picks.map((p) => p.objective.id));
+  // A goal longer than the whole budget is still offered on its own rather than nothing.
+  assert.equal(suggest([b], { profileId: "main", budgetMin: 15 }).picks.length, 1);
+  assert.equal(suggest([], { profileId: "main", budgetMin: 60 }).picks.length, 0);
+  assert.deepEqual(lastFinishedPlace([a, done], "main")?.placeId, "P4");
+});
+
+test("debrief counts only what was ticked, and routes export as RipTide JSON with straight-line metres", () => {
+  const a = goal({ title: "A", status: "done" }, 1);
+  const b = goal({ title: "B" }, 2);
+  const d = debrief({ id: "s", profileId: "main", budgetMin: 30, startedAt: 0, endedAt: 45 * 60000, queue: [a.id, b.id], completed: [a.id], notes: "", revision: 0 }, [a, b]);
+  assert.deepEqual([d.done.length, d.open.length, d.minutes, d.overBudget], [1, 1, 45, true]);
+  const route = { id: "r", profileId: "main", name: "Loop", method: "straight-line" as const, map: "leonida-v1", createdAt: 0, revision: 0, stops: [placeRef({ id: "1", title: "A", x: 0, y: 0 }), placeRef({ id: "2", title: "C", x: 2000, y: 0 }), placeRef({ id: "3", title: "B", x: 1000, y: 0 })] };
+  const better = optimiseRoute(route);
+  assert.ok(pathLength(better.stops) < pathLength(route.stops));
+  const file = JSON.parse(exportRoute(better));
+  assert.equal(file.format, "riptide-route");
+  assert.equal(file.method, "straight-line");
+  assert.equal(file.straightLineMetres, 2000);
+  assert.equal(typeForCategory("garages"), "vehicle");
+});
+
+test("Today data is validated: bad input is cleaned or refused, and old installs start empty", () => {
+  assert.deepEqual(JourneyState.parse(undefined ?? {}).objectives, []);
+  const t = createObjective({ title: "  <b>hi</b>\u0007  ", profileId: "main" });
+  assert.equal(t.title, "<b>hi</b>", "control characters removed; React renders the rest as text");
+  assert.equal(JourneyState.safeParse({ objectives: [{ id: "x", title: "a".repeat(500), createdAt: 1 }] }).success, false);
+  assert.equal(JourneyState.safeParse({ routes: [{ id: "r", name: "r", createdAt: 1, method: "road" }] }).success, false, "only straight-line routes exist");
+});
