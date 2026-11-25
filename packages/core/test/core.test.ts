@@ -389,7 +389,8 @@ test("docker stack says it's an example", () => {
 import { renderIntegrationsDoc, CAPABILITIES } from "../src/capabilities";
 
 test("docs/INTEGRATIONS.md is generated from the capability list and up to date", () => {
-  const onDisk = readFileSync(new URL("../../../docs/INTEGRATIONS.md", import.meta.url), "utf8");
+  // Windows checkouts may turn line endings into CRLF; compare the text, not the line endings.
+  const onDisk = readFileSync(new URL("../../../docs/INTEGRATIONS.md", import.meta.url), "utf8").replace(/\r\n/g, "\n");
   assert.equal(onDisk, renderIntegrationsDoc(), "Run `npm run docs:status` after changing packages/core/src/capabilities.ts");
 });
 
