@@ -1,0 +1,25 @@
+{
+  "name": "RipTide Tools",
+  "short_name": "RipTide",
+  "description": "Plan sessions, track places and keep your GTA notes, on your own device.",
+  "start_url": "./?shell=tools",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#130f26",
+  "theme_color": "#130f26",
+  "icons": [
+    {
+      "src": "./brand/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./brand/logo-tile-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

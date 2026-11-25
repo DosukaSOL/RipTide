@@ -7,9 +7,11 @@ import { App } from "./App";
 import { Splash } from "./components/Splash";
 import { ToolsApp } from "./tools/ToolsApp";
 import { wantsToolsShell } from "./tools/data";
+import { registerServiceWorker } from "./tools/install";
 import { KEYS, Settings, readStored } from "@riptide/tools";
 
 const root = createRoot(document.getElementById("root")!);
+registerServiceWorker();
 
 if (wantsToolsShell()) {
   // RipTide Tools preview shell (feature flag). Detached tool windows skip the splash.

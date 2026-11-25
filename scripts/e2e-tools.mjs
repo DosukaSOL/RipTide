@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
-const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json", ".ttf": "font/ttf", ".otf": "font/otf", ".txt": "text/plain; charset=utf-8" };
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json", ".ttf": "font/ttf", ".otf": "font/otf", ".txt": "text/plain; charset=utf-8", ".webmanifest": "application/manifest+json" };
 /** Serves a built copy of the app on localhost only. */
 async function serveDir(dir) {
   const root = resolve(dir);
@@ -320,6 +320,26 @@ await check("map art switched off: grid instead, same places, progress and marke
   await page.locator(".rt-progress-head").getByText(/^1$/).waitFor();
   const after = (await stored()).markers.at(-1);
   assert.deepEqual([after.id, after.x, after.y], [before.id, before.x, before.y]);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("map as a list: same places, select one, back to the map", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(tools("map"));
+  await page.getByText(/places shown/).waitFor();
+  await page.getByRole("button", { name: "Show as list" }).click();
+  const rows = page.locator(".rt-map-listrow");
+  await rows.first().waitFor();
+  assert.equal(await rows.count(), 400);
+  await page.getByText(/Showing the first 400 of 884/).waitFor();
+  await page.fill("#rt-map-q", "Y Vice City");
+  await page.waitForFunction(() => document.querySelectorAll(".rt-map-listrow").length < 400);
+  await page.fill("#rt-map-q", "");
+  await page.locator(".rt-map-listrow", { hasText: "Albany Hotel" }).click();
+  await page.locator(".rt-place-title", { hasText: "Albany Hotel" }).waitFor();
+  await page.getByRole("button", { name: "Show map" }).click();
+  assert.equal(await page.locator(".rt-map-list").count(), 0);
   assert.deepEqual(errors, []);
   await ctx.close();
 });
@@ -677,6 +697,57 @@ await check("heist debrief: outcome and notes, run added to Today, saved to the 
   await page.locator(".rt-jn-ms").getByText(/: Partly$/).waitFor();
   await page.locator(".rt-jn-ms").getByText("Driver was late").waitFor();
   assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+console.log("\nPhones and offline");
+await check("phone: tab bar and menu reach every tool, nothing scrolls sideways", async () => {
+  const { ctx, page, errors } = await fresh({ width: 390, height: 844 }, 2, { isMobile: true, hasTouch: true });
+  await page.goto(tools("home"));
+  await page.locator(".rt-bottomnav").waitFor();
+  assert.equal(await page.locator(".rt-side").isVisible(), false, "sidebar hidden on phones");
+  for (const id of ["today", "map", "journal", "home"]) {
+    await page.click(`.rt-bottomnav [data-bottom="${id}"]`);
+    await page.waitForSelector(`section[data-module="${id}"]:not([hidden])`);
+  }
+  for (const id of ["today", "journal", "garage", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help", "studio", "home"]) {
+    await page.click('.rt-bottomnav [data-bottom="more"]');
+    await page.locator(`.rt-side .rt-navitem[data-tool="${id}"]`).click();
+    await page.waitForSelector(`section[data-module="${id}"]:not([hidden])`);
+    assert.equal(await page.locator(".rt-root.rt-drawer").count(), 0, "menu closes after choosing");
+    await page.waitForTimeout(150);
+    const over = await page.evaluate((m) => {
+      const el = document.querySelector(`section[data-module="${m}"]`);
+      return [document.documentElement.scrollWidth - innerWidth, el.scrollWidth - el.clientWidth];
+    }, id);
+    assert.deepEqual(over, [0, 0], `${id} fits a phone`);
+  }
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("installable and works offline once opened", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(`${base}/?shell=tools&splash=0&sw=1#/today`);
+  const manifest = await page.evaluate(async () => (await fetch(document.querySelector('link[rel="manifest"]').href)).json());
+  assert.equal(manifest.display, "standalone");
+  assert.ok(manifest.icons.some((i) => i.sizes === "512x512"));
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    for (let i = 0; i < 50 && !navigator.serviceWorker.controller; i++) await new Promise((r) => setTimeout(r, 100));
+  });
+  await page.reload();
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await ctx.setOffline(true);
+  await page.reload();
+  await page.getByRole("heading", { name: "Plan your next session." }).waitFor();
+  await page.goto(`${base}/?shell=tools&splash=0&sw=1#/map`);
+  await page.getByText(/places shown/).waitFor();
+  await ctx.setOffline(false);
+  // Map tiles you haven't viewed yet can't load offline; everything else must.
+  const left = errors.filter((e) => !/failed|ERR_INTERNET_DISCONNECTED/i.test(e));
+  if (left.length) console.log("    errors:", JSON.stringify(left).slice(0, 600));
+  assert.deepEqual(left, []);
   await ctx.close();
 });
 

@@ -50,6 +50,14 @@ export function Help() {
           </section>
         </div>
       </div>
+      <section className="rt-panel rt-pad" aria-labelledby="rt-phone" style={{ marginTop: 24 }}>
+        <h2 id="rt-phone">Use it on your phone</h2>
+        <ul className="rt-steps" style={{ marginTop: 12 }}>
+          <li>Open the RipTide website on your phone and add it to your home screen: on iPhone, Share → Add to Home Screen; on Android, Install app.</li>
+          <li>After the first visit it works offline, including Today, the Journal and the Garage. Map tiles you've looked at are kept for offline use too.</li>
+          <li>Each device keeps its own data. To move it, use Settings → Export on one device and Restore on the other.</li>
+        </ul>
+      </section>
       <About />
     </div>
   );

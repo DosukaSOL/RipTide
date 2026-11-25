@@ -284,7 +284,7 @@ function Debrief({ session, objectives, onDone }: { session: JourneyState["sessi
   return (
     <>
       <h2 id="rt-td-plan">Session finished</h2>
-      <div className="rt-stats" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+      <div className="rt-stats rt-stats-3">
         <div className="rt-panel rt-stat"><div className="rt-stat-label">Done</div><div className="rt-stat-v">{d.done.length}<small>of {session.queue.length}</small></div></div>
         <div className="rt-panel rt-stat"><div className="rt-stat-label">Time</div><div className="rt-stat-v">{d.minutes}<small>min</small></div></div>
         <div className="rt-panel rt-stat"><div className="rt-stat-label">Planned</div><div className="rt-stat-v">{session.budgetMin}<small>min</small></div></div>

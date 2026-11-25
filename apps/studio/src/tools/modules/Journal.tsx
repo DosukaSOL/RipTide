@@ -94,7 +94,7 @@ export function Journal() {
       <PageHeader crumb="Journal" title="Keep the story of your run." sub="Notes, milestones and what you finished in Today, in one timeline. Everything here is yours: RipTide only records what you write or tick." right={<HeaderRight />} />
       {err && <div className="rt-banner rt-warn" role="alert" style={{ marginBottom: 16 }}>{err}</div>}
 
-      <div className="rt-stats" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+      <div className="rt-stats rt-stats-4">
         <div className="rt-panel rt-stat"><div className="rt-stat-label">Places found</div><div className="rt-stat-v">{profile.found.length}<small>of {total} mapped</small></div></div>
         <div className="rt-panel rt-stat"><div className="rt-stat-label">Goals done</div><div className="rt-stat-v">{goalsDone}<small>{goalsOpen} open</small></div></div>
         <div className="rt-panel rt-stat"><div className="rt-stat-label">Sessions</div><div className="rt-stat-v">{sessions.length}<small>{minutes} min</small></div></div>

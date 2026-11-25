@@ -132,6 +132,7 @@ function MapBody() {
   const [journey, setJourney] = usePersisted(KEYS.journey, JourneyState, journeyDefault);
   const [, setJournal] = usePersisted(KEYS.journal, JournalState, journalDefault);
   const shownRoute = journey.routes.find((r) => r.id === journey.shownRouteId);
+  const [listMode, setListMode] = useState(false);
   const [view, setView] = useState<View>(() => clampView(s.view));
   const [placing, setPlacing] = useState(false);
   const [packErr, setPackErr] = useState("");
@@ -455,6 +456,8 @@ function MapBody() {
           basemap={basemap}
           image={basemap.id === "custom" && image.meta && image.url ? { meta: image.meta, url: image.url } : null}
           route={shownRoute}
+          listMode={listMode}
+          onListMode={setListMode}
           onHideRoute={() => setJourney((d) => void (d.shownRouteId = ""))}
           view={view}
           setView={setView}
@@ -741,6 +744,8 @@ function MapCanvas(props: {
   image: { meta: MapImage; url: string } | null;
   route?: Route;
   onHideRoute: () => void;
+  listMode: boolean;
+  onListMode: (on: boolean) => void;
   view: View;
   setView: (fn: View | ((v: View) => View)) => void;
   onSize: (w: number, h: number) => void;
@@ -806,7 +811,7 @@ function MapCanvas(props: {
   };
 
   const onDown = (e: PointerEvent) => {
-    if (e.button !== 0 || (e.target as Element).closest(".rt-marker, .rt-map-zoom, .rt-empty, .rt-map-credit a, .rt-route-badge")) return;
+    if (e.button !== 0 || (e.target as Element).closest(".rt-marker, .rt-map-zoom, .rt-empty, .rt-map-credit a, .rt-route-badge, .rt-list-toggle, .rt-map-list")) return;
     drag.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
     stage.current?.setPointerCapture?.(e.pointerId);
   };
@@ -905,7 +910,9 @@ function MapCanvas(props: {
         <MarkerLayer records={shown} selectedId={props.selected?.id ?? ""} found={props.found} favorites={props.favorites} scale={s} rPx={rPx} onSelect={props.onSelect} />
       </svg>
 
+      {props.listMode && <PlaceList records={props.records} found={props.found} selectedId={props.selected?.id ?? ""} onSelect={props.onSelect} />}
       <div className="rt-map-badges">
+        <button className="rt-badge rt-list-toggle" aria-pressed={props.listMode} onClick={() => props.onListMode(!props.listMode)}>{props.listMode ? "Show map" : "Show as list"}</button>
         <span className="rt-badge">{basemap.badge}</span>
         <span className="rt-badge">{data.status === "loading" ? "Loading places…" : data.places ? `${fmt(props.records.length)} places shown` : "No place data"}</span>
         {props.route && (
@@ -933,6 +940,23 @@ function MapCanvas(props: {
       <div className="rt-map-credit">
         {basemap.attribution ? "Map © Rockstar Games · " : ""}Places: <a href={GTADB} target="_blank" rel="noopener noreferrer">gtadb.org</a>, <a href={CC_BY} target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
       </div>
+    </div>
+  );
+}
+
+/** The places shown, as a plain list: works without any map background, and with screen readers. */
+function PlaceList({ records, found, selectedId, onSelect }: { records: MapRecord[]; found: ReadonlySet<string>; selectedId: string; onSelect: (id: string) => void }) {
+  const sorted = useMemo(() => [...records].sort((a, b) => a.title.localeCompare(b.title)).slice(0, 400), [records]);
+  return (
+    <div className="rt-map-list" role="list" aria-label="Places shown">
+      {sorted.map((r) => (
+        <button key={r.id} role="listitem" className="rt-map-listrow" aria-current={r.id === selectedId ? "true" : undefined} onClick={() => onSelect(r.id)}>
+          <span className="rt-swatch" style={{ background: r.category === "personal" ? PERSONAL_COLOR : categoryById(r.category)?.color }} aria-hidden="true" />
+          <span className="rt-td-body"><b>{r.title}</b><small>{[categoryById(r.category)?.label ?? "My markers", r.area || r.region].filter(Boolean).join(" · ")}</small></span>
+          {found.has(r.id) && <LuCheck className="rt-map-listfound" aria-label="Found" />}
+        </button>
+      ))}
+      {records.length > sorted.length && <p className="rt-hint">Showing the first {sorted.length} of {records.length}. Search or filter to narrow it down.</p>}
     </div>
   );
 }

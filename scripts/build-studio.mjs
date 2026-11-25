@@ -1,6 +1,7 @@
 // Builds Riptide Studio into apps/studio/dist. Pass --serve for a local dev server.
 import { context } from "esbuild";
 import { writeLicenses } from "./licenses.mjs";
+import { writeServiceWorker } from "./service-worker.mjs";
 import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 
 const out = process.env.RIPTIDE_STUDIO_OUT || "apps/studio/dist";
@@ -18,6 +19,8 @@ cpSync("brand/mark.svg", `${out}/favicon.svg`);
 mkdirSync(`${out}/brand`, { recursive: true });
 cpSync("brand/mark.svg", `${out}/brand/mark.svg`);
 cpSync("brand/lockup.png", `${out}/brand/lockup.png`);
+cpSync("brand/logo-512.png", `${out}/brand/logo-512.png`);
+cpSync("brand/logo-tile-512.png", `${out}/brand/logo-tile-512.png`);
 // Leonida places, and the map art unless it's switched off (see THIRD_PARTY_NOTICES.md).
 const mapSrc = "apps/studio/assets/map/leonida";
 mkdirSync(`${out}/map/leonida`, { recursive: true });
@@ -56,4 +59,5 @@ if (serve) {
   await ctx.dispose();
   const pkgs = writeLicenses(result.metafile, `${out}/THIRD_PARTY_LICENSES.txt`);
   console.log(`Licences: ${pkgs.map((p) => p.name).join(", ")}`);
+  writeServiceWorker(out);
 }

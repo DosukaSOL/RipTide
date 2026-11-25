@@ -43,12 +43,14 @@
 
 ## What is RipTide?
 
-RipTide is one app for your whole GTA setup. Six tools live side by side, stay running while you switch between them, and pop out onto a second monitor when you want them there. Everything runs on your PC: no account, nothing uploaded, and nothing that touches the game.
+RipTide is one app for your whole GTA setup. Its tools live side by side, stay running while you switch between them, and pop out onto a second monitor when you want them there. Everything runs on your PC: no account, nothing uploaded, and nothing that touches the game.
 
 | Tool | What it does |
 | --- | --- |
 | **Today** | Say how long you've got and get a short list from goals you set yourself, with the reason for each pick, a session checklist, a summary at the end and routes between places. Distances are straight lines; RipTide never reads the game or ticks anything off for you. |
-| **Interactive Map** | The official map of Leonida with 884 places to find in nine categories, or RipTide's own schematic grid if you prefer. Search, region filters, found tracking across up to eight playthroughs, favourites, your own markers, Add to Today, routes and a second-screen pop-out. |
+| **Journal** | Notes and milestones with tags and places, next to everything you finished in Today, in one searchable timeline. Deleted notes can be restored for 30 days. |
+| **Garage** | The vehicles you own or want, properties with their spaces, and savings goals, with your own prices. "Hunt in Today" turns a wanted car into a goal. |
+| **Interactive Map** | The official map of Leonida with 884 places to find in nine categories, your own map image, or RipTide's schematic grid. Also works as a plain list. Search, region filters, found tracking across up to eight playthroughs, favourites, your own markers, Add to Today, routes and a second-screen pop-out. |
 | **ViceLab** | Real frame times from PresentMon, CapFrameX, MangoHud, OCAT and FrameView: average FPS, 1% and 0.1% lows, stability. Screenshot compare and settings picked from your own runs. |
 | **Heist Ops** | Plan the job with your crew: roles, phases, checklists and shared notes. Share a plan as a file. |
 | **RipTide Studio** | Design a roleplay or community server without code, check it fits together, and export its FiveM `server.cfg`. More below. |
@@ -69,7 +71,7 @@ What works today, what's a demonstration and what waits for GTA VI on PC: **[doc
 
 ## Why RipTide
 
-- **All in one app.** Six tools, one window, one workspace.
+- **All in one app.** Every tool in one window, one workspace.
 - **Two screens, one setup.** Pop any tool out and it remembers where it was.
 - **Stays on your PC.** No account needed, nothing is uploaded.
 - **Never touches the game.** No memory reads, no injection, no bots. ViceLab only reads files your capture tool saved.
@@ -123,7 +125,7 @@ Frameworks, inventories, voice, phones, HUDs, housing, garages, jobs, police and
 
 ## Try it
 
-- **In your browser:** [open RipTide Tools](https://dosukasol.github.io/RipTide/app/?shell=tools). Nothing to install, and everything stays on your device.
+- **In your browser or on your phone:** [open RipTide Tools](https://dosukasol.github.io/RipTide/app/?shell=tools). Nothing to install, everything stays on your device, and you can add it to your home screen to use it offline.
 - **Desktop app:** [download it](https://github.com/DosukaSOL/RipTide/releases/latest) for Windows, macOS or Linux. Your data is saved as files in `Documents/RipTide`, it works offline, it never gets cleared with your browser data, and it updates itself with one click when a new version is out. The builds aren't code-signed yet, so the first launch shows a warning: on Windows click **More info → Run anyway**, on macOS right-click the app and choose **Open**.
 
 To run it yourself, you'll need Node 20 or newer.

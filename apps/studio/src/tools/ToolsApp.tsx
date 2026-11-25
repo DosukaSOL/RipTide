@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { LuPanelLeftClose, LuPanelLeftOpen, LuArrowDownLeft } from "react-icons/lu";
+import { LuPanelLeftClose, LuPanelLeftOpen, LuArrowDownLeft, LuMenu } from "react-icons/lu";
 import { ToolId } from "@riptide/tools";
 import { MODULES, moduleById } from "./registry";
 import { Shell, useToasts } from "./ui";
@@ -7,6 +7,11 @@ import { ToolsDataProvider, useToolsData } from "./data";
 import { closeAllDetached, useDetachedRuntime, useOpenWindows, DETACHABLE, type OpenWindow } from "./windows";
 import "./tools.css";
 import { UpdatePill, UpdatePrompt } from "./Updates";
+import { InstallButton } from "./install";
+
+/** Tools in the phone tab bar; everything else is under More. */
+const BOTTOM: ToolId[] = ["home", "today", "map", "journal"];
+const SHORT: Partial<Record<ToolId, string>> = { map: "Map" };
 
 const STUDIO_SECTIONS = ["overview", "world", "economy", "rules", "roles", "mods", "access", "deploy"];
 
@@ -47,7 +52,8 @@ function Main() {
     mq.addEventListener("change", on);
     return () => mq.removeEventListener("change", on);
   }, []);
-  const collapsed = userCollapsed ?? isNarrow;
+  const [drawer, setDrawer] = useState(false);
+  const collapsed = drawer ? false : userCollapsed ?? isNarrow;
 
   useEffect(() => {
     const on = () => {
@@ -124,13 +130,14 @@ function Main() {
     setIndY(el ? el.offsetTop : null);
   }, [active, collapsed]);
 
+  useEffect(() => setDrawer(false), [active]);
   const shell = useMemo(() => ({ active, go, mounted, unmount, toast, detached: false }), [active, go, mounted, unmount, toast]);
   const detachedTools = new Set(windows.map((w) => w.tool));
 
   return (
     <Shell.Provider value={shell}>
       <OpenWindows.Provider value={windows}>
-        <div className={`rt-root${collapsed ? " rt-collapsed" : ""}${motionClass(settings.motion)}`}>
+        <div className={`rt-root${collapsed ? " rt-collapsed" : ""}${drawer ? " rt-drawer" : ""}${motionClass(settings.motion)}`}>
           <header className="rt-top">
             <button className="rt-iconbtn" onClick={() => setUserCollapsed(!collapsed)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title="Toggle sidebar (Ctrl+B)">
               {collapsed ? <LuPanelLeftOpen /> : <LuPanelLeftClose />}
@@ -141,6 +148,7 @@ function Main() {
             </a>
             <div className="rt-top-spacer" />
             <UpdatePill />
+            <InstallButton />
             <span className="rt-top-note">Independent companion app</span>
           </header>
 
@@ -194,6 +202,20 @@ function Main() {
               <p className="rt-legal">Independent companion software. Not affiliated with Rockstar Games or Take-Two Interactive.</p>
             </div>
           </aside>
+
+          {drawer && <button className="rt-scrim" aria-label="Close menu" onClick={() => setDrawer(false)} />}
+          <nav className="rt-bottomnav" aria-label="Main">
+            {BOTTOM.map((id) => {
+              const m = moduleById(id);
+              const Icon = m.icon;
+              return (
+                <a key={id} href={`#/${id}`} data-bottom={id} aria-current={active === id && !drawer ? "page" : undefined} onClick={() => setDrawer(false)}>
+                  <Icon /><span>{SHORT[id] ?? m.label}</span>
+                </a>
+              );
+            })}
+            <button aria-expanded={drawer} data-bottom="more" onClick={() => setDrawer(!drawer)}><LuMenu /><span>More</span></button>
+          </nav>
 
           <main className="rt-main">
             {storageError && <div className="rt-banner rt-warn" role="alert" style={{ margin: "16px 24px 0" }}>{storageError}</div>}

@@ -631,3 +631,56 @@
 .rt-td-goals .rt-td-bar { margin-top: 8px; max-width: 420px; }
 .rt-td-empty svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 4px; }
 @media (max-width: 900px) { .rt-gr-add, .rt-gr-add.rt-gr-add5 { grid-template-columns: 1fr 1fr; } .rt-gr-detail { padding-left: 0; } }
+
+/* Stat rows */
+.rt-stats.rt-stats-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rt-stats.rt-stats-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 860px) { .rt-stats.rt-stats-3, .rt-stats.rt-stats-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Phone: bottom tab bar, menu drawer, map first */
+.rt-bottomnav, .rt-scrim { display: none; }
+.rt-install { height: 32px; margin-right: 8px; }
+@media (max-width: 640px) {
+  .rt-root, .rt-root.rt-collapsed { grid-template-columns: minmax(0, 1fr); grid-template-rows: 52px minmax(0, 1fr); }
+  .rt-top { padding-left: 12px; padding-right: 12px; }
+  .rt-top > .rt-iconbtn, .rt-top-note, .rt-top-ver { display: none; }
+  .rt-side { display: none; }
+  .rt-main { grid-column: 1; }
+  .rt-module { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .rt-page { padding: 20px 16px 28px; }
+  .rt-head-right { display: none; }
+  .rt-root.rt-drawer .rt-side { display: flex; position: fixed; z-index: 60; top: 52px; bottom: calc(64px + env(safe-area-inset-bottom)); left: 0; width: min(300px, 84vw); box-shadow: 12px 0 40px rgba(0, 0, 0, .45); }
+  .rt-scrim { display: block; position: fixed; z-index: 55; inset: 52px 0 0 0; border: 0; background: rgba(8, 6, 18, .55); }
+  .rt-bottomnav {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); position: fixed; z-index: 70; left: 0; right: 0; bottom: 0;
+    height: calc(64px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(17, 13, 33, .96); border-top: 1px solid var(--rt-line); backdrop-filter: blur(10px);
+  }
+  .rt-bottomnav > a, .rt-bottomnav > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; border: 0; background: none; color: var(--rt-muted); font-size: 11.5px; text-decoration: none; }
+  .rt-bottomnav svg { width: 21px; height: 21px; }
+  .rt-bottomnav span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rt-bottomnav [aria-current="page"], .rt-bottomnav [aria-expanded="true"] { color: var(--rt-pink); }
+  .rt-map-grid { margin-top: 18px; gap: 14px; grid-template-rows: clamp(340px, 62vh, 560px) auto auto; }
+  .rt-map-grid > .rt-map-stage { order: -1; }
+  .rt-map-grid > .rt-map-col:first-child { max-height: none; }
+  .rt-today { margin-top: 24px; gap: 16px; }
+  .rt-td-queue > li { flex-wrap: wrap; }
+  .rt-td-meta { width: 100%; justify-content: space-between; padding-left: 42px; }
+  .rt-td-addrow { grid-template-columns: 1fr 1fr; }
+  .rt-gr-amt { width: 100%; }
+  .rt-gr-amt .rt-input { flex: 1; width: auto; }
+  .rt-stat { padding: 16px; }
+  .rt-stat-v { font-size: 24px; }
+  .rt-tabs { gap: 20px; margin-top: 24px; }
+  .rt-map-credit { max-width: calc(100% - 70px); }
+}
+
+/* Map as a list */
+.rt-map-badges .rt-list-toggle { pointer-events: auto; cursor: pointer; font: inherit; font-size: 12px; color: var(--rt-sand); }
+.rt-map-list { position: absolute; inset: 0; z-index: 1; overflow: auto; padding: 60px 12px 44px; background: #15112b; }
+.rt-map-listrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-bottom: 1px solid var(--rt-line); background: none; color: var(--rt-sand); text-align: left; cursor: pointer; }
+.rt-map-listrow:hover, .rt-map-listrow[aria-current="true"] { background: var(--rt-hover); }
+.rt-map-listrow b { display: block; font-weight: 600; }
+.rt-map-listrow small { display: block; color: var(--rt-muted); font-size: 12.5px; }
+.rt-map-listrow .rt-swatch { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.rt-map-listfound { flex: none; color: var(--rt-sea); width: 16px; height: 16px; }

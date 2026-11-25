@@ -47,7 +47,7 @@ export function Garage() {
     <div className="rt-page">
       <PageHeader crumb="Garage" title="Your cars, places and plans." sub="Track what you own, what you're after and what you're saving for. RipTide has no car list or prices of its own: every name and number here is yours." right={<HeaderRight />} />
       {err && <div className="rt-banner rt-warn" role="alert" style={{ marginBottom: 16 }}>{err}</div>}
-      <div className="rt-stats" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+      <div className="rt-stats rt-stats-3">
         <div className="rt-panel rt-stat"><div className="rt-stat-label">Owned</div><div className="rt-stat-v">{t.owned}<small>{t.spacesLeft !== undefined ? `${t.spacesLeft} spaces left` : "vehicles"}</small></div></div>
         <div className="rt-panel rt-stat"><div className="rt-stat-label">Wanted</div><div className="rt-stat-v">{t.wanted}<small>vehicles</small></div></div>
         <div className="rt-panel rt-stat"><div className="rt-stat-label">Wish list cost</div><div className="rt-stat-v">{formatAmount(t.wantedCost)}<small>{t.unpriced ? `${t.unpriced} without a price` : "your prices"}</small></div></div>
