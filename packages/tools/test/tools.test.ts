@@ -676,7 +676,13 @@ test("the map art is only drawn when it's chosen, built in and loaded; otherwise
   assert.equal(pickBasemap("official", { artBuilt: false, tilesLoaded: true }).id, "schematic");
   assert.equal(pickBasemap("official", { artBuilt: true, tilesLoaded: false }).id, "schematic");
   assert.equal(pickBasemap("schematic", { artBuilt: true, tilesLoaded: true }).id, "schematic");
-  assert.deepEqual(availableBasemaps(false).map((b) => b.id), ["schematic"]);
+  assert.deepEqual(availableBasemaps(false).map((b) => b.id), ["custom", "schematic"]);
+  assert.deepEqual(availableBasemaps(true).map((b) => b.id), ["official", "custom", "schematic"]);
+  // Your own image is used once it's loaded; until then (or after removing it) the art or the grid.
+  assert.equal(pickBasemap("custom", { artBuilt: true, tilesLoaded: true, customLoaded: true }).id, "custom");
+  assert.equal(pickBasemap("custom", { artBuilt: true, tilesLoaded: true, customLoaded: false }).id, "official");
+  assert.equal(pickBasemap("custom", { artBuilt: false, tilesLoaded: false, customLoaded: false }).id, "schematic");
+  assert.equal(BASEMAPS.custom.attribution, null);
   // The grid is RipTide's own and credits nobody else.
   assert.equal(BASEMAPS.official.status, "bundled");
   assert.equal(BASEMAPS.schematic.attribution, null);
@@ -788,4 +794,28 @@ test("Today data is validated: bad input is cleaned or refused, and old installs
   assert.equal(t.title, "<b>hi</b>", "control characters removed; React renders the rest as text");
   assert.equal(JourneyState.safeParse({ objectives: [{ id: "x", title: "a".repeat(500), createdAt: 1 }] }).success, false);
   assert.equal(JourneyState.safeParse({ routes: [{ id: "r", name: "r", createdAt: 1, method: "road" }] }).success, false, "only straight-line routes exist");
+});
+
+test("your own map image: whole-map fit and lining up with places", async () => {
+  const { fitAffine, solveAffine, applyAffine, alignError, imageAffine, svgMatrix, MapImage } = await import("../src/basemap");
+  const fit = fitAffine(4096, 4096);
+  assert.deepEqual(applyAffine(fit, 0, 0), { x: -16384, y: 16384 });
+  assert.deepEqual(applyAffine(fit, 4096, 4096), { x: 16384, y: -16384 });
+  // A scaled, rotated, shifted image is recovered exactly from three or more places.
+  const truth = { a: 3.2, b: 0.4, c: -0.3, d: -3.1, e: -9000, f: 8000 };
+  const at = (px: number, py: number) => ({ px, py, x: truth.a * px + truth.c * py + truth.e, y: truth.b * px + truth.d * py + truth.f });
+  const pts = [at(100, 120), at(2400, 300), at(900, 2600), at(1800, 1900)];
+  const m = solveAffine(pts)!;
+  assert.ok(alignError(m, pts) < 1e-6);
+  const q = applyAffine(m, 1500, 1500);
+  const want = at(1500, 1500);
+  assert.ok(Math.hypot(q.x - want.x, q.y - want.y) < 1e-6);
+  // Too few, or in a line: no transform.
+  assert.equal(solveAffine(pts.slice(0, 2)), null);
+  assert.equal(solveAffine([at(0, 0), at(100, 100), at(200, 200)]), null);
+  // The image's transform falls back to the whole-map fit without enough places.
+  const img = MapImage.parse({ type: "image/png", width: 4096, height: 4096, bytes: 10, addedAt: 1, mode: "points", points: [] });
+  assert.deepEqual(imageAffine(img), fit);
+  assert.match(svgMatrix(fit), /^matrix\(8 -?0 -?0 8 -16384 -16384\)$/);
+  assert.equal(MapImage.safeParse({ type: "image/svg+xml", width: 1, height: 1, bytes: 1, addedAt: 1 }).success, false, "SVG is never accepted");
 });

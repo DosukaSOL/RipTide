@@ -196,7 +196,7 @@ await step("restoring a backup writes every part to disk as one change", async (
   const backup = join(tmpdir(), `riptide-restore-${process.pid}.json`);
   const plan = { schema: 1, id: "r1", name: "Restored plan", description: "", createdAt: 1, updatedAt: 1, roles: [], phases: [], notes: "from the backup" };
   writeFileSync(backup, JSON.stringify({ format: "riptide-tools-backup", version: 1, "riptide.heist.v1": { plans: [plan], activeId: "r1" }, "riptide.settings.v1": { motion: "reduced", splash: false } }));
-  await win.setInputFiles('section[data-module="settings"] input[type="file"]', backup);
+  await win.setInputFiles('#rt-restore-file', backup);
   await win.getByRole("button", { name: "Restore", exact: true }).click();
   await win.getByText(/Restored 2 parts/).waitFor();
   assert.match(readFileSync(f, "utf8"), /from the backup/);

@@ -324,6 +324,60 @@ await check("map art switched off: grid instead, same places, progress and marke
   await ctx.close();
 });
 
+await check("your own map image: stays on the device, lines up with places, survives a reload, can be removed", async () => {
+  const { ctx, page, errors } = await fresh();
+  const outside = [];
+  page.on("request", (r) => !r.url().startsWith(base) && !r.url().startsWith("blob:") && !r.url().startsWith("data:") && outside.push(r.url()));
+  await page.goto(tools("settings"));
+  const input = page.locator('.rt-mapimg input[type="file"]');
+  // Anything that isn't a real PNG, JPEG or WebP is refused, whatever its name.
+  await input.setInputFiles({ name: "map.png", mimeType: "image/png", buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>') });
+  await page.getByText("That isn't a PNG, JPEG or WebP image.").waitFor();
+  const png = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 1024;
+    c.height = 1024;
+    const g = c.getContext("2d");
+    g.fillStyle = "#335";
+    g.fillRect(0, 0, 1024, 1024);
+    g.fillStyle = "#fc6";
+    g.fillRect(500, 300, 200, 200);
+    return c.toDataURL("image/png").split(",")[1];
+  });
+  await input.setInputFiles({ name: "my-map.png", mimeType: "image/png", buffer: Buffer.from(png, "base64") });
+  await page.getByText(/Using my-map\.png \(1024 × 1024\)/).waitFor();
+  assert.equal(await page.inputValue("#rt-basemap"), "custom");
+  // Line it up with three places.
+  for (const [name, x, y] of [["Y Vice City", 0.62, 0.4], ["Albany Hotel", 0.62, 0.37], ["Vice Beach Marina", 0.58, 0.52]]) {
+    await page.fill("#rt-mi-q", name);
+    await page.locator(".rt-mapimg-results button", { hasText: name }).first().click();
+    const img = page.locator(".rt-mapimg-canvas img");
+    const box = await img.boundingBox();
+    await img.click({ position: { x: box.width * x, y: box.height * y } });
+  }
+  await page.locator(".rt-fit").waitFor();
+  assert.equal(await page.locator(".rt-mapimg-pin").count(), 3);
+  await page.goto(tools("map"));
+  const own = page.locator(".rt-own-map");
+  await own.waitFor({ state: "attached" });
+  assert.match(await own.getAttribute("href"), /^blob:/);
+  assert.equal(await page.locator(".rt-tiles image").count(), 0);
+  await page.locator(".rt-map-badges").getByText("Your map image").waitFor();
+  assert.equal(await page.locator(".rt-map-credit").getByText(/Rockstar/).count(), 0);
+  // Still there after a reload: it's stored on this device.
+  await page.reload();
+  await page.locator(".rt-own-map").waitFor({ state: "attached" });
+  await page.goto(tools("settings"));
+  await page.locator(".rt-mapimg").getByRole("button", { name: "Remove", exact: true }).click();
+  await page.getByText("Image removed from this device.").waitFor();
+  await page.goto(tools("map"));
+  await page.locator(".rt-tiles image").first().waitFor({ state: "attached" });
+  assert.equal(await page.locator(".rt-own-map").count(), 0);
+  assert.deepEqual(outside, [], "nothing leaves the device");
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
 await check("a build without map art works and never asks for it", async () => {
   const out = join(tmpdir(), `riptide-noart-${process.pid}`);
   execFileSync(process.execPath, ["scripts/build-studio.mjs"], { env: { ...process.env, RIPTIDE_MAP_ART: "off", RIPTIDE_STUDIO_OUT: out }, stdio: "ignore" });
@@ -337,7 +391,7 @@ await check("a build without map art works and never asks for it", async () => {
     await page.getByText(new RegExp(`${placesJson.places.length.toLocaleString("en-US")} places shown`)).waitFor();
     assert.equal(await page.locator(".rt-banner, [role=alert]").count(), 0, "no error banner");
     await page.goto(`${noart.url}/?shell=tools&splash=0#/settings`);
-    assert.ok(await page.locator("#rt-basemap").isDisabled());
+    assert.deepEqual(await page.locator("#rt-basemap option").evaluateAll((o) => o.map((x) => x.value)), ["custom", "schematic"], "no map art to choose");
     await page.goto(`${noart.url}/?shell=tools&splash=0#/help`);
     await page.locator(".rt-credits").getByText(/doesn't include map art/).waitFor();
     await page.getByRole("button", { name: "Show licences" }).click();
@@ -676,7 +730,7 @@ await check("desktop: a restore the disk refuses shows why and changes nothing",
   const backup = { format: "riptide-tools-backup", version: 1, exportedAt: "2026-11-20T00:00:00Z", "riptide.settings.v1": { motion: "reduced", splash: false } };
   const file = join(tmpdir(), `riptide-backup-full-${process.pid}.json`);
   await writeFile(file, JSON.stringify(backup));
-  await page.setInputFiles('section[data-module="settings"] input[type="file"]', file);
+  await page.setInputFiles('#rt-restore-file', file);
   await page.getByRole("button", { name: "Restore", exact: true }).click();
   await page.getByText(/The disk is full, so nothing was changed/).waitFor();
   assert.equal(await page.getByText(/Reloading/).count(), 0, "no success message");
@@ -734,11 +788,11 @@ await check("backups: checked before restoring, all or nothing, and complete", a
   const tampered = structuredClone(backup);
   tampered.parts["riptide.heist.v1"].data.plans[0].notes = "tampered";
   await writeFile(bad, JSON.stringify(tampered));
-  await page.setInputFiles('section[data-module="settings"] input[type="file"]', bad);
+  await page.setInputFiles('#rt-restore-file', bad);
   await page.getByText(/Nothing was restored/).waitFor();
   assert.equal(await page.getByRole("button", { name: "Restore", exact: true }).count(), 0);
   assert.match(await page.evaluate(() => localStorage.getItem("riptide.heist.v1")), /changed after the backup/);
-  await page.setInputFiles('section[data-module="settings"] input[type="file"]', good);
+  await page.setInputFiles('#rt-restore-file', good);
   await page.getByText("This backup is valid. Restoring will:").waitFor();
   await page.getByRole("button", { name: "Restore", exact: true }).click();
   await page.waitForTimeout(1500);

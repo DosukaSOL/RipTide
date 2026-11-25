@@ -82,7 +82,7 @@ function About() {
         <dt>Map background</dt>
         <dd>
           {MAP_ART_BUILT
-            ? <>The map art of Leonida is © Rockstar Games; the tiles were prepared by gtadb.org. {art ? "It's shown now." : "It's switched off in Settings, so RipTide's own grid is shown."}</>
+            ? <>The map art of Leonida is © Rockstar Games; the tiles were prepared by gtadb.org. {art ? "It's shown now." : settings.basemap === "custom" ? "You're using your own map image instead; it stays on this device." : "It's switched off in Settings, so RipTide's own grid is shown."}</>
             : <>This copy of RipTide doesn't include map art. The grid is RipTide's own drawing.</>}
         </dd>
         <dt>Places</dt>

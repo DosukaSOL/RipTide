@@ -54,7 +54,10 @@ import {
   labelled,
   LEONIDA_BOX,
   pickBasemap,
+  imageAffine,
+  svgMatrix,
   worldToScreen,
+  type MapImage,
   JourneyState,
   createObjective,
   formatDistance,
@@ -76,6 +79,7 @@ import { DetachedGuard, HeaderRight } from "./common";
 import { useToolsData } from "../data";
 import { openToolWindow } from "../windows";
 import { MAP_ART_BUILT, MAP_BASE, useMapData, type MapData } from "../mapdata";
+import { useMapImage } from "../mapimage";
 
 const mapDefault = () => MapState.parse({});
 const journeyDefault = () => JourneyState.parse({});
@@ -89,12 +93,15 @@ export function MapTool() {
   const { detached } = useShell();
   const { settings } = useToolsData();
   const art = MAP_ART_BUILT && settings.basemap === "official";
+  const own = settings.basemap === "custom";
   return (
     <DetachedGuard tool="map">
       <div className="rt-page" style={detached ? { maxWidth: "none" } : undefined}>
         <PageHeader crumb="Interactive Map" title="Find your next discovery." sub={art
           ? "Rockstar's official map of Leonida, with community-mapped places to find, progress to track and your own markers. Pop it out to a second screen any time."
-          : "Community-mapped places of Leonida on RipTide's schematic grid, with progress to track and your own markers. Pop it out to a second screen any time."} right={<HeaderRight />} />
+          : own
+            ? "Community-mapped places of Leonida on your own map image, with progress to track and your own markers. Pop it out to a second screen any time."
+            : "Community-mapped places of Leonida on RipTide's schematic grid, with progress to track and your own markers. Pop it out to a second screen any time."} right={<HeaderRight />} />
         <MapBody />
       </div>
     </DetachedGuard>
@@ -115,7 +122,8 @@ function MapBody() {
   const { toast, detached } = useShell();
   const { activeWorkspace, setWorkspaces, settings } = useToolsData();
   const data = useMapData();
-  const basemap = pickBasemap(settings.basemap, { artBuilt: MAP_ART_BUILT, tilesLoaded: !!data.manifest });
+  const image = useMapImage();
+  const basemap = pickBasemap(settings.basemap, { artBuilt: MAP_ART_BUILT, tilesLoaded: !!data.manifest, customLoaded: !!(image.meta && image.url) });
   const [s, set, storageError] = usePersisted(KEYS.map, MapState, mapDefault);
   const [journey, setJourney] = usePersisted(KEYS.journey, JourneyState, journeyDefault);
   const shownRoute = journey.routes.find((r) => r.id === journey.shownRouteId);
@@ -440,6 +448,7 @@ function MapBody() {
         <MapCanvas
           data={data}
           basemap={basemap}
+          image={basemap.id === "custom" && image.meta && image.url ? { meta: image.meta, url: image.url } : null}
           route={shownRoute}
           onHideRoute={() => setJourney((d) => void (d.shownRouteId = ""))}
           view={view}
@@ -528,7 +537,7 @@ function MapBody() {
       </div>
       <div className="rt-foot-note">
         <span>
-          {basemap.attribution ? `${basemap.attribution} ` : "Background: RipTide's own schematic grid, no game art. "}
+          {basemap.attribution ? `${basemap.attribution} ` : basemap.id === "custom" ? "Background: your own map image, kept on this device. " : "Background: RipTide's own schematic grid, no game art. "}
           Places: GTA VI Landmarks Data by <a href={GTADB} target="_blank" rel="noopener noreferrer">gtadb.org</a> and contributors (<a href={CC_BY} target="_blank" rel="noopener noreferrer">CC BY 4.0</a>), filtered and recategorised by RipTide.
           {data.places ? ` Data from ${data.places.revisionDate}.` : ""}
         </span>
@@ -720,6 +729,7 @@ function ProgressBlock({ s, set, total, found, onNext }: { s: MapState; set: (fn
 function MapCanvas(props: {
   data: MapData;
   basemap: Basemap;
+  image: { meta: MapImage; url: string } | null;
   route?: Route;
   onHideRoute: () => void;
   view: View;
@@ -877,6 +887,8 @@ function MapCanvas(props: {
               <image key={`${t.z}/${t.key}`} href={`${MAP_BASE}/${t.z}/${t.key}.jpg`} x={t.x0} y={-t.yTop} width={t.size * 1.002} height={t.size * 1.002} preserveAspectRatio="none" />
             ))}
           </g>
+        ) : props.image ? (
+          <image className="rt-own-map" href={props.image.url} x={0} y={0} width={props.image.meta.width} height={props.image.meta.height} transform={svgMatrix(imageAffine(props.image.meta))} opacity={props.image.meta.opacity} preserveAspectRatio="none" aria-hidden="true" />
         ) : (
           <SchematicGrid view={view} w={size.w} h={size.h} />
         )}
@@ -908,7 +920,7 @@ function MapCanvas(props: {
         <button className="rt-iconbtn" aria-label="Next unfound place" onClick={props.onNext}><LuNavigation /></button>
         <button className="rt-iconbtn" aria-label="Add a personal marker" aria-pressed={placing} style={placing ? { color: "var(--rt-pink)" } : undefined} onClick={() => (placing ? props.onCancelPlacing() : props.onStartPlacing())}><LuMapPin /></button>
       </div>
-      {!manifest && <GridLabels view={view} w={size.w} h={size.h} />}
+      {!manifest && !props.image && <GridLabels view={view} w={size.w} h={size.h} />}
       <div className="rt-map-credit">
         {basemap.attribution ? "Map © Rockstar Games · " : ""}Places: <a href={GTADB} target="_blank" rel="noopener noreferrer">gtadb.org</a>, <a href={CC_BY} target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
       </div>

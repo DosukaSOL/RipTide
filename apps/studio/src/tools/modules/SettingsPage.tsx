@@ -10,6 +10,7 @@ import { readFlags, useToolsData, writeFlags } from "../data";
 import { downloadText, readFileText } from "../persist";
 import { UpdatesPanel } from "../Updates";
 import { MAP_ART_BUILT } from "../mapdata";
+import { MapImagePanel } from "./MapImage";
 
 /** Everything RipTide keeps on this device, by owner, with the schema each part must pass to be restored. */
 const DATA_KEYS: BackupPart[] = [
@@ -116,14 +117,15 @@ export function SettingsPage() {
           <SettingRow
             title="Map background"
             hint={MAP_ART_BUILT
-              ? "Map art: Rockstar's map of Leonida. Schematic grid: RipTide's own grid, no game art. Your places, markers and progress stay the same."
-              : "This copy of RipTide doesn't include map art, so the map uses RipTide's own schematic grid. Your places, markers and progress are unaffected."}
+              ? "Map art: Rockstar's map of Leonida. Your own map image: one you add below. Schematic grid: RipTide's own grid. Your places, markers and progress stay the same."
+              : "This copy of RipTide doesn't include map art. Use your own map image (add it below) or RipTide's schematic grid. Your places, markers and progress are unaffected."}
           >
             <label className="rt-sr" htmlFor="rt-basemap">Map background</label>
-            <select id="rt-basemap" className="rt-select" style={{ width: 170, height: 36 }} value={MAP_ART_BUILT ? settings.basemap : "schematic"} disabled={!MAP_ART_BUILT} onChange={(e) => setSettings((d) => void (d.basemap = e.target.value as Settings["basemap"]))}>
+            <select id="rt-basemap" className="rt-select" style={{ width: 170, height: 36 }} value={!MAP_ART_BUILT && settings.basemap === "official" ? "schematic" : settings.basemap} onChange={(e) => setSettings((d) => void (d.basemap = e.target.value as Settings["basemap"]))}>
               {availableBasemaps(MAP_ART_BUILT).map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
             </select>
           </SettingRow>
+          <MapImagePanel />
           <SettingRow title="RipTide Tools shell" hint="Preview. Turn off to go back to the classic Studio">
             <Switch label="RipTide Tools shell" checked onChange={() => {
               writeFlags({ ...readFlags(), toolsShell: false });
@@ -139,7 +141,7 @@ export function SettingsPage() {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "8px 0 16px" }}>
             <button className="rt-btn rt-sm" onClick={exportAll}><LuDownload />Export everything</button>
             <button className="rt-btn rt-sm" onClick={() => input.current?.click()}><LuUpload />Restore a backup</button>
-            <input ref={input} type="file" accept=".json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void checkBackup(f); e.target.value = ""; }} />
+            <input ref={input} id="rt-restore-file" type="file" accept=".json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void checkBackup(f); e.target.value = ""; }} />
           </div>
           {err && <div className="rt-error" role="alert">{err}</div>}
           {plan && (

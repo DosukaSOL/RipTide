@@ -582,3 +582,24 @@
 .rt-route-stop text { fill: var(--rt-sun); font: 700 11px var(--rt-display); text-anchor: middle; dominant-baseline: central; }
 .rt-map-badges .rt-route-badge { pointer-events: auto; gap: 8px; }
 .rt-route-badge .rt-link { display: inline-grid; place-items: center; color: inherit; }
+
+/* Your own map image (Settings) */
+.rt-mapimg { border-bottom: 1px solid var(--rt-line); padding-bottom: 12px; }
+.rt-mapimg-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rt-mapimg-head .rt-badge { max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
+.rt-mapimg-pick { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.rt-mapimg-pick .rt-input { height: 40px; font-size: 14px; padding-left: 14px; }
+.rt-mapimg-results { list-style: none; margin: 6px 0 0; padding: 4px; border: 1px solid var(--rt-line-2); border-radius: 10px; background: #15112b; }
+.rt-mapimg-results button { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 8px 10px; border: 0; border-radius: 7px; background: none; color: var(--rt-sand); font-size: 14px; text-align: left; cursor: pointer; }
+.rt-mapimg-results button:hover, .rt-mapimg-results button:focus-visible { background: var(--rt-hover); outline: none; }
+.rt-mapimg-results span { color: var(--rt-muted); font-size: 12.5px; }
+.rt-mapimg-view { margin-top: 10px; max-height: 420px; overflow: auto; border: 1px solid var(--rt-line); border-radius: 10px; background: #0f0c1e; }
+.rt-mapimg-canvas { position: relative; }
+.rt-mapimg-canvas img { display: block; width: 100%; height: auto; user-select: none; }
+.rt-mapimg-view.rt-aiming img { cursor: crosshair; }
+.rt-mapimg-pin { position: absolute; display: grid; place-items: center; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--rt-pink); color: var(--rt-pink-ink); font: 700 11px var(--rt-display); box-shadow: 0 0 0 2px #130f26; pointer-events: none; }
+.rt-mapimg-points { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
+.rt-mapimg-points li { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.rt-mapimg-points .rt-iconbtn { width: 28px; height: 28px; }
+.rt-fit.rt-good { color: var(--rt-sea); }
+.rt-fit.rt-bad { color: #ff8cbd; }
