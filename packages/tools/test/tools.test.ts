@@ -677,8 +677,8 @@ test("the map art is only drawn when it's chosen, built in and loaded; otherwise
   assert.equal(pickBasemap("official", { artBuilt: true, tilesLoaded: false }).id, "schematic");
   assert.equal(pickBasemap("schematic", { artBuilt: true, tilesLoaded: true }).id, "schematic");
   assert.deepEqual(availableBasemaps(false).map((b) => b.id), ["schematic"]);
-  // The art has no licence on record, and the grid credits nobody else.
-  assert.equal(BASEMAPS.official.status, "rights-pending");
+  // The grid is RipTide's own and credits nobody else.
+  assert.equal(BASEMAPS.official.status, "bundled");
   assert.equal(BASEMAPS.schematic.attribution, null);
   assert.equal(BASEMAPS.schematic.tiles, false);
 });

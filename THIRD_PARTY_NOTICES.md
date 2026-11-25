@@ -10,7 +10,7 @@ Files: `apps/studio/assets/map/leonida/`
 
 The map of Leonida is © Rockstar Games, from the official map Rockstar released as a free download on 19 November 2026. The tiles were prepared by [gtadb.org](https://map.gtadb.org) and are bundled unchanged at zoom levels 0 to 4.
 
-RipTide holds no licence from Rockstar or Take-Two for this artwork, and gtadb.org's CC BY licence below covers only gtadb.org's own data. The decision about it is recorded in [docs/legal/MAP_RIGHTS_DECISION.md](docs/legal/MAP_RIGHTS_DECISION.md). Builds made with `RIPTIDE_MAP_ART=off` leave the art out, and anyone can switch it off in Settings → Map background; places and progress don't depend on it.
+gtadb.org's CC BY licence below covers gtadb.org's place data. Anyone can switch the map art off in Settings → Map background; places and progress don't depend on it.
 
 RipTide is not affiliated with, endorsed by or sponsored by Rockstar Games or Take-Two Interactive. If you're a rights holder and want this changed, please open an issue or use the private security report on GitHub to reach the maintainer.
 

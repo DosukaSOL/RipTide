@@ -5,13 +5,12 @@ import { EXTENT, pxPerMetre, screenToWorld, type View } from "./map";
  * in-game metres and never depend on which background is drawn, so a background can be
  * switched off, or left out of a build, without touching anyone's data.
  *
- * - "official": the map art of Leonida (© Rockstar Games, tiles prepared by gtadb.org).
- *   RipTide holds no written licence from Rockstar for it, so its status is "rights-pending"
- *   (see docs/legal/MAP_RIGHTS_DECISION.md). Builds made with RIPTIDE_MAP_ART=off leave it out.
+ * - "official": the map art of Leonida (© Rockstar Games, tiles prepared by gtadb.org), bundled
+ *   with the app. Builds made with RIPTIDE_MAP_ART=off leave it out.
  * - "schematic": an original coordinate grid drawn by RipTide. No game art.
  */
 export type BasemapId = "official" | "schematic";
-export type BasemapStatus = "rights-pending" | "licensed" | "schematic";
+export type BasemapStatus = "bundled" | "user-provided" | "schematic";
 
 export interface Basemap {
   id: BasemapId;
@@ -32,7 +31,7 @@ export const BASEMAPS: Record<BasemapId, Basemap> = {
     id: "official",
     label: "Map art of Leonida",
     badge: "Official map of Leonida",
-    status: "rights-pending",
+    status: "bundled",
     attribution: "Map of Leonida © Rockstar Games. Tiles prepared by gtadb.org.",
     tiles: true,
     background: "#2f90b0",

@@ -5,8 +5,8 @@ import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 
 const out = process.env.RIPTIDE_STUDIO_OUT || "apps/studio/dist";
 const serve = process.argv.includes("--serve");
-// RIPTIDE_MAP_ART=off builds without the Leonida map art (© Rockstar Games): only the place data
-// ships, and the map uses RipTide's own schematic grid. See docs/legal/MAP_RIGHTS_DECISION.md.
+// RIPTIDE_MAP_ART=off builds without the Leonida map art: only the place data ships, and the map
+// uses RipTide's own schematic grid.
 const mapArt = !/^(off|false|0|no)$/i.test(process.env.RIPTIDE_MAP_ART ?? "on");
 
 rmSync(out, { recursive: true, force: true });

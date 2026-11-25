@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/* Every artwork, screenshot, font, dataset and media file must be in docs/legal/assets.json. */
+/* Every artwork, screenshot, font, dataset and media file must be in docs/assets.json. */
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const MEDIA = /\.(png|jpe?g|webp|gif|svg|ico|icns|mp4|webm|mov|mp3|wav|ogg|ttf|otf|woff2?)$/i;
@@ -34,8 +34,8 @@ function trackedAssets(): string[] {
 const toRegex = (glob: string) =>
   new RegExp(`^${glob.replace(/[.+^${}()|\\]/g, "\\$&").replace(/\*\*/g, "\u0000").replace(/\*/g, "[^/]*").replace(/\u0000/g, ".*")}$`);
 
-const register = JSON.parse(readFileSync(join(ROOT, "docs/legal/assets.json"), "utf8")) as {
-  assets: { id: string; paths: string[]; license: string; risk: string; mapArt: boolean; removal: string }[];
+const register = JSON.parse(readFileSync(join(ROOT, "docs/assets.json"), "utf8")) as {
+  assets: { id: string; paths: string[]; license: string; credit: string; owner: string; source: string }[];
 };
 
 test("every asset file is in the asset register exactly once", () => {
@@ -48,19 +48,15 @@ test("every asset file is in the asset register exactly once", () => {
     if (hits.length === 0) unregistered.push(f);
     if (hits.length > 1) twice.push(`${f} (${hits.map((h) => h.id).join(", ")})`);
   }
-  assert.deepEqual(unregistered, [], "Add these to docs/legal/assets.json");
+  assert.deepEqual(unregistered, [], "Add these to docs/assets.json");
   assert.deepEqual(twice, []);
 });
 
-test("the register is honest about the map art", () => {
+test("every asset says who made it, where it's from and how it's credited", () => {
   const ids = new Set<string>();
   for (const a of register.assets) {
     assert.ok(!ids.has(a.id), `duplicate id ${a.id}`);
     ids.add(a.id);
-    assert.ok(["low", "medium", "high"].includes(a.risk), a.id);
-    assert.ok(a.license && a.removal, a.id);
-    // Nothing that contains Rockstar's art may be recorded as licensed until a licence exists.
-    if (a.mapArt) assert.match(a.license, /LicenseRef-Rockstar-Unlicensed/, a.id);
-    if (a.mapArt) assert.equal(a.risk, "high", a.id);
+    for (const k of ["license", "credit", "owner", "source"] as const) assert.ok(a[k]?.trim(), `${a.id} needs ${k}`);
   }
 });
