@@ -71,11 +71,19 @@ export function StoreProvider({ children, active = true }: { children: ReactNode
   const nextId = useRef(1);
 
   const unsaved = useRef<typeof state.bp | null>(null);
+  const warned = useRef(false);
   const save = useCallback((bp: typeof state.bp) => {
     try {
       localStorage.setItem(KEY, JSON.stringify(bp));
-    } catch {
-      /* private mode: keep working in memory */
+      warned.current = false;
+    } catch (e) {
+      // Private mode keeps working in memory. A failed save to disk in the desktop app is said out loud, once.
+      if (e instanceof Error && e.name === "DiskWriteError" && !warned.current) {
+        warned.current = true;
+        const id = nextId.current++;
+        setToasts((t) => [...t, { id, msg: "Couldn't save your Blueprint to disk. Your changes are kept until you close RipTide." }]);
+        setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000);
+      }
     }
   }, []);
   useEffect(() => {

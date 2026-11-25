@@ -76,8 +76,12 @@ export function usePersisted<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, 
         localStorage.setItem(key, JSON.stringify(out));
         base.current = out;
         setError("");
-      } catch {
-        setError("This device's storage is full or blocked, so recent changes are only kept until you close RipTide. Export your data to keep it.");
+      } catch (e) {
+        setError(
+          e instanceof Error && e.name === "DiskWriteError"
+            ? "RipTide couldn't save your latest change to disk. It's kept in this window until you close it, and RipTide tries again with your next change."
+            : "This device's storage is full or blocked, so recent changes are only kept until you close RipTide. Export your data to keep it.",
+        );
       }
     },
     [key, schema],

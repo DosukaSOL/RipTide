@@ -48,6 +48,33 @@ jobs:
           INPUT: ${{ inputs.version }}
         run: bash .github/scripts/release-version.sh
 
+  # Pushes that don't release still launch the real Linux app and run its checks, so a change
+  # to saving, restoring or updating is tested in the packaged app before any release.
+  test-linux:
+    needs: version
+    if: needs.version.outputs.publish != 'true' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      - run: npm run build
+      - run: npm install --no-audit --no-fund
+        working-directory: desktop
+      - name: Build the Linux app (unpacked)
+        working-directory: desktop
+        run: |
+          npm run copy-app
+          npx electron-builder --linux dir --publish never
+      - name: Test the packaged app (Linux)
+        timeout-minutes: 12
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" node desktop/test/app.e2e.mjs desktop/release/linux-unpacked/riptide-tools
+
   build:
     needs: version
     if: needs.version.outputs.publish == 'true' || github.event_name == 'workflow_dispatch'

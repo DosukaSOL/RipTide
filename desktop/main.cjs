@@ -142,6 +142,15 @@ ipcMain.on("rt:readBackup", (e, key) => {
 ipcMain.on("rt:write", (e, key, value) => {
   e.returnValue = fromApp(e) && storage.isKey(key) && (value === null || typeof value === "string") ? storage.writeKey(dataDir, key, value) : false;
 });
+// Several keys as one change (restoring a backup): all or nothing, see storage.writeMany.
+ipcMain.on("rt:writeMany", (e, entries) => {
+  if (!fromApp(e) || !Array.isArray(entries) || entries.length > 50) {
+    e.returnValue = { ok: false, error: "EINVAL" };
+    return;
+  }
+  const clean = entries.map((x) => ({ key: x?.key, value: x?.value === null ? null : typeof x?.value === "string" ? x.value : undefined }));
+  e.returnValue = storage.writeMany(dataDir, clean);
+});
 ipcMain.on("rt:dataDir", (e) => {
   e.returnValue = fromApp(e) ? dataDir : "";
 });

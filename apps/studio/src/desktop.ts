@@ -48,6 +48,8 @@ export interface DesktopBridge {
   readBackup?(key: string): string | null;
   /** Write one key to disk, or delete it with null. Returns false if it failed. */
   write(key: string, value: string | null): boolean;
+  /** Write several keys as one change: all or nothing. Missing in older builds. */
+  writeMany?(entries: { key: string; value: string | null }[]): { ok: boolean; error?: string; partial?: boolean };
   /** Where the files live, for display. */
   dataDir(): string;
   openDataDir(): void;
@@ -68,6 +70,55 @@ export function desktopBridge(): DesktopBridge | null {
 let failed = false;
 /** True once a write to disk has failed in this window. */
 export const desktopWriteFailed = () => failed;
+
+/** Thrown by localStorage writes in the desktop app when the file on disk couldn't be saved. */
+export class DiskWriteError extends Error {
+  name = "DiskWriteError";
+}
+
+const diskMessage = (code?: string) =>
+  code === "ENOSPC"
+    ? "The disk is full, so nothing was changed. Free up some space and try again."
+    : code === "EPERM" || code === "EACCES" || code === "EROFS"
+      ? "RipTide isn't allowed to write to its data folder, so nothing was changed. Check the folder's permissions in Settings."
+      : "RipTide couldn't save to disk, so nothing was changed. Try again.";
+
+type Entry = { key: string; value: string | null };
+type Commit = { ok: true } | { ok: false; error: string };
+let commitImpl: ((entries: Entry[]) => Commit) | null = null;
+
+/**
+ * Save several keys as one change, and only report success once it's really saved.
+ * Desktop: one all-or-nothing change on disk, then read back to check. Browser: written one by
+ * one, checked, and put back if any write fails.
+ */
+export function commitKeys(entries: Entry[]): Commit {
+  if (commitImpl) return commitImpl(entries);
+  const ls = window.localStorage;
+  const before = new Map<string, string | null>();
+  for (const e of entries) before.set(e.key, ls.getItem(e.key));
+  const done: string[] = [];
+  try {
+    for (const e of entries) {
+      if (e.value === null) ls.removeItem(e.key);
+      else ls.setItem(e.key, e.value);
+      if (ls.getItem(e.key) !== e.value) throw new Error("not saved");
+      done.push(e.key);
+    }
+    return { ok: true };
+  } catch {
+    for (const k of done.reverse()) {
+      try {
+        const prev = before.get(k) ?? null;
+        if (prev === null) ls.removeItem(k);
+        else ls.setItem(k, prev);
+      } catch {
+        /* best effort: the previous value was smaller */
+      }
+    }
+    return { ok: false, error: "This browser's storage is full, so nothing was changed. Free up space or use the desktop app." };
+  }
+}
 
 export function initStorage(): "desktop" | "browser" | "none" {
   let ls: Storage;
@@ -156,21 +207,67 @@ export function initStorage(): "desktop" | "browser" | "none" {
     saveKnown();
   }
 
-  const save = (k: string, v: string | null) => {
-    if (!OURS.test(k) || held.has(k)) return;
+  /** Save to disk first. Returns false if the file couldn't be written. */
+  const save = (k: string, v: string | null): boolean => {
+    if (!OURS.test(k) || held.has(k)) return true;
     if (!bridge.write(k, v)) {
       failed = true;
-      return;
+      return false;
     }
     if (v === null ? known.delete(k) : !known.has(k) && known.add(k)) saveKnown();
+    return true;
   };
+  // The file is written before the working copy, and a failed file write throws, so code that
+  // saves only reports success once the data is really on disk.
   Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
+    if (this === ls && !save(String(key), String(value))) throw new DiskWriteError(diskMessage());
     setItem.call(this, key, value);
-    if (this === ls) save(String(key), String(value));
   };
   Storage.prototype.removeItem = function (this: Storage, key: string) {
+    if (this === ls && !save(String(key), null)) throw new DiskWriteError(diskMessage());
     removeItem.call(this, key);
-    if (this === ls) save(String(key), null);
+  };
+  commitImpl = (entries) => {
+    if (typeof bridge.writeMany !== "function") {
+      // Older desktop build: save one by one, putting earlier keys back if one fails.
+      const before = entries.map((e) => ({ key: e.key, value: ls.getItem(e.key) }));
+      const done: Entry[] = [];
+      for (const e of entries) {
+        if (!bridge.write(e.key, e.value)) {
+          for (const d of done.reverse()) bridge.write(d.key, before.find((b) => b.key === d.key)!.value);
+          return { ok: false, error: diskMessage() };
+        }
+        done.push(e);
+      }
+    } else {
+      const r = bridge.writeMany(entries);
+      if (!r?.ok) {
+        failed = true;
+        return { ok: false, error: r?.partial ? "RipTide couldn't finish saving. It will complete the change the next time it starts." : diskMessage(r?.error) };
+      }
+    }
+    // Check what's on disk now matches, then update the working copy.
+    let disk: Record<string, string> = {};
+    try {
+      disk = bridge.readAll() ?? {};
+    } catch {
+      return { ok: false, error: "RipTide saved the change but couldn't read it back to check it. Restart RipTide before using it." };
+    }
+    for (const e of entries) {
+      if ((disk[e.key] ?? null) !== e.value) return { ok: false, error: "RipTide saved the change but it didn't read back the same. Restart RipTide and check your data." };
+    }
+    for (const e of entries) {
+      try {
+        if (e.value === null) removeItem.call(ls, e.key);
+        else setItem.call(ls, e.key, e.value);
+      } catch {
+        /* the files are right; the working copy is reloaded from them on the next start */
+      }
+      if (e.value === null) known.delete(e.key);
+      else known.add(e.key);
+    }
+    saveKnown();
+    return { ok: true };
   };
   Storage.prototype.clear = function (this: Storage) {
     if (this === ls) {

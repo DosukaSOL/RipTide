@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { LuDownload, LuUpload, LuRotateCcw, LuFolderOpen, LuHardDrive, LuGlobe } from "react-icons/lu";
-import { desktopBridge, desktopWriteFailed } from "../../desktop";
+import { commitKeys, desktopBridge, desktopWriteFailed } from "../../desktop";
 import { z } from "zod";
 import { Blueprint } from "@riptide/core";
 import { applyRestore, BACKUP_MAX_BYTES, createBackup, Flags, HeistState, KEYS, LEGACY_KEYS, MapState, planRestore, Settings, ViceLabState, WorkspacesState, type BackupPart, type RestorePlan } from "@riptide/tools";
@@ -31,6 +31,8 @@ const store = {
   get: (k: string) => localStorage.getItem(k),
   set: (k: string, v: string) => localStorage.setItem(k, v),
   remove: (k: string) => localStorage.removeItem(k),
+  // Success is only reported once the restore is really saved (on disk in the desktop app).
+  commit: commitKeys,
 };
 
 export function SettingsPage() {
@@ -44,7 +46,7 @@ export function SettingsPage() {
   const exportAll = () => {
     const { file, skipped } = createBackup(BACKUP_PARTS, store);
     downloadText(`riptide-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(file, null, 2));
-    if (skipped.length) setErr(`Exported, but these couldn't be read on this device and were left out: ${skipped.join(", ")}.`);
+    if (skipped.length) setErr(`Exported, but ${skipped.map((x) => `${x.label} was left out because ${x.reason}`).join("; ")}. A copy is kept in the file for support, but it can't be restored.`);
   };
 
   // Restoring is two steps: check the file and show what will change, then restore on confirm.
@@ -76,8 +78,10 @@ export function SettingsPage() {
   const reset = (key: string) => {
     try {
       localStorage.removeItem(key);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      setConfirm("");
+      setErr(e instanceof Error && e.message ? e.message : "Couldn't reset that data. Try again.");
+      return;
     }
     setConfirm("");
     location.reload();

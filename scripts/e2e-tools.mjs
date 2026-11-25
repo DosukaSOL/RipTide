@@ -401,8 +401,8 @@ await check("desktop: saved files load first and every change is written to disk
   await ctx.close();
 });
 
-async function withDesktop(ctx, { files, backups = {}, ls = {} }) {
-  await ctx.addInitScript(({ files, backups, ls }) => {
+async function withDesktop(ctx, { files, backups = {}, ls = {}, failWrites = false, failCommit = null }) {
+  await ctx.addInitScript(({ files, backups, ls, failWrites, failCommit }) => {
     if (!sessionStorage.getItem("__seeded")) {
       sessionStorage.setItem("__seeded", "1");
       sessionStorage.setItem("__files", JSON.stringify(files));
@@ -414,17 +414,28 @@ async function withDesktop(ctx, { files, backups = {}, ls = {} }) {
       readAll: () => ({ ...store }),
       readBackup: (k) => backups[k] ?? null,
       write: (k, v) => {
+        if (failWrites || window.__failWrites) return false;
         window.__writes.push([k, v]);
         if (v === null) delete store[k];
         else store[k] = v;
         sessionStorage.setItem("__files", JSON.stringify(store));
         return true;
       },
+      writeMany: (entries) => {
+        if (failCommit) return { ok: false, error: failCommit };
+        for (const { key, value } of entries) {
+          window.__writes.push([key, value]);
+          if (value === null) delete store[key];
+          else store[key] = value;
+        }
+        sessionStorage.setItem("__files", JSON.stringify(store));
+        return { ok: true };
+      },
       dataDir: () => "C:\\Users\\you\\Documents\\RipTide",
       openDataDir: () => {},
       version: () => "0.1.0",
     };
-  }, { files, backups, ls });
+  }, { files, backups, ls, failWrites, failCommit });
 }
 const plan = (id, name, notes) => ({ schema: 1, id, name, description: "", createdAt: 1, updatedAt: 1, roles: [], phases: [], notes });
 
@@ -462,6 +473,37 @@ await check("desktop: a damaged save is recovered from its backup, and says so",
   await page.getByRole("heading", { name: "Good backup" }).waitFor();
   await page.getByText(/restored the previous version from its backup/).waitFor();
   await page.waitForFunction(() => window.__writes.some(([k, v]) => k === "riptide.heist.v1" && v && v.includes("recovered")));
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("desktop: a change that can't be saved to disk says so and isn't treated as saved", async () => {
+  const { ctx, page, errors } = await fresh();
+  await withDesktop(ctx, { files: {} });
+  await page.goto(tools("heist"));
+  await page.getByRole("button", { name: "Create plan" }).click();
+  await page.waitForTimeout(400);
+  await page.evaluate(() => (window.__failWrites = true));
+  await page.fill("#rt-plan-notes", "this can't reach the disk");
+  await page.getByText(/couldn't save your latest change to disk/).waitFor();
+  // The working copy wasn't updated either, so it never claims a save that didn't happen.
+  assert.doesNotMatch((await page.evaluate(() => localStorage.getItem("riptide.heist.v1"))) ?? "", /can't reach the disk/);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("desktop: a restore the disk refuses shows why and changes nothing", async () => {
+  const { ctx, page, errors } = await fresh();
+  await withDesktop(ctx, { files: { "riptide.settings.v1": JSON.stringify({ motion: "full", splash: true }) }, failCommit: "ENOSPC" });
+  await page.goto(tools("settings"));
+  const backup = { format: "riptide-tools-backup", version: 1, exportedAt: "2026-11-20T00:00:00Z", "riptide.settings.v1": { motion: "reduced", splash: false } };
+  const file = join(tmpdir(), `riptide-backup-full-${process.pid}.json`);
+  await writeFile(file, JSON.stringify(backup));
+  await page.setInputFiles('section[data-module="settings"] input[type="file"]', file);
+  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await page.getByText(/The disk is full, so nothing was changed/).waitFor();
+  assert.equal(await page.getByText(/Reloading/).count(), 0, "no success message");
+  assert.match(await page.evaluate(() => localStorage.getItem("riptide.settings.v1")), /"full"/);
   assert.deepEqual(errors, []);
   await ctx.close();
 });

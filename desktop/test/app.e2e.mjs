@@ -2,7 +2,7 @@
 // Usage: node desktop/test/app.e2e.mjs <path to the unpacked app executable>
 import { _electron as electron } from "playwright";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 
@@ -188,5 +188,32 @@ await step("a data file deleted outside the app stays deleted", async () => {
   await win.waitForTimeout(600);
   assert.equal(existsSync(f), false, "not written back");
 });
+await step("restoring a backup writes every part to disk as one change", async () => {
+  await go(win, "#/settings");
+  const backup = join(tmpdir(), `riptide-restore-${process.pid}.json`);
+  const plan = { schema: 1, id: "r1", name: "Restored plan", description: "", createdAt: 1, updatedAt: 1, roles: [], phases: [], notes: "from the backup" };
+  writeFileSync(backup, JSON.stringify({ format: "riptide-tools-backup", version: 1, "riptide.heist.v1": { plans: [plan], activeId: "r1" }, "riptide.settings.v1": { motion: "reduced", splash: false } }));
+  await win.setInputFiles('section[data-module="settings"] input[type="file"]', backup);
+  await win.getByRole("button", { name: "Restore", exact: true }).click();
+  await win.getByText(/Restored 2 parts/).waitFor();
+  assert.match(readFileSync(f, "utf8"), /from the backup/);
+  assert.match(readFileSync(join(dataDir, "riptide.settings.v1.json"), "utf8"), /reduced/);
+  assert.deepEqual(readdirSync(dataDir).filter((n) => /commit|journal/.test(n)), [], "no leftover working files");
+});
+if (process.platform !== "win32" && process.getuid?.() !== 0) {
+  await step("when the data folder can't be written, the app says so instead of pretending to save", async () => {
+    await win.waitForTimeout(1500); // let the reload after the restore finish
+    await go(win, "#/heist");
+    await win.locator("#rt-plan-notes").waitFor();
+    chmodSync(dataDir, 0o555);
+    try {
+      await win.fill("#rt-plan-notes", "the folder is read-only");
+      await win.getByText(/couldn't save your latest change to disk/).waitFor();
+      assert.doesNotMatch(readFileSync(f, "utf8"), /read-only/);
+    } finally {
+      chmodSync(dataDir, 0o755);
+    }
+  });
+}
 await closeApp(app);
 console.log(`\n${passed} desktop checks passed (data in ${dataDir})`);

@@ -7,6 +7,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("riptideDesktop", {
   readAll: () => ipcRenderer.sendSync("rt:readAll"),
   readBackup: (key) => ipcRenderer.sendSync("rt:readBackup", String(key)),
+  writeMany: (entries) => ipcRenderer.sendSync("rt:writeMany", entries),
   write: (key, value) => ipcRenderer.sendSync("rt:write", String(key), value === null ? null : String(value)),
   dataDir: () => ipcRenderer.sendSync("rt:dataDir"),
   openDataDir: () => ipcRenderer.send("rt:openDataDir"),

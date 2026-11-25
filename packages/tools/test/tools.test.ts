@@ -521,7 +521,8 @@ test("version 1 backups from earlier previews still restore", () => {
 
 test("export leaves out damaged parts and says so", () => {
   const { file, skipped } = createBackup(parts, memStore({ [K.settings]: "{cut", [K.heist]: '{"plans":[]}' }));
-  assert.deepEqual(skipped, ["Settings"]);
+  assert.deepEqual(skipped.map((x) => x.label), ["Settings"]);
+  assert.equal(file.quarantine?.[K.settings]?.raw, "{cut", "kept for support, outside the restorable parts");
   assert.ok(file.parts[K.heist] && !file.parts[K.settings]);
 });
 
@@ -606,4 +607,63 @@ test("recommendations without hardware or scene, or with single runs, say they'r
   const rec = recommend([{ id: "a", game: "g", preset: "low", stats: { avgFps: 100, low1Fps: 80 } }, { id: "b", game: "g", preset: "high", stats: { avgFps: 70, low1Fps: 50 } }], "g", "balanced", 60)!;
   assert.equal(rec.confidence, "low");
   assert.equal(rec.caveats.length, 3);
+});
+
+/* ---------- durable saves: backups only contain what restores ---------- */
+
+test("export skips parts that wouldn't restore, and says why", () => {
+  const { file, skipped } = createBackup(parts, memStore({ [K.settings]: '{"motion":"sideways"}', [K.heist]: '{"plans":[]}' }));
+  assert.ok(!file.parts[K.settings]);
+  assert.match(skipped[0]!.reason, /doesn't match/);
+  // The quarantine section is never restored.
+  const plan = planRestore(JSON.stringify(file), parts, memStore());
+  assert.ok(plan.ok && plan.items.every((i) => i.key !== K.settings));
+});
+
+test("every backup RipTide exports restores, and the restore reproduces it exactly", () => {
+  const samples: Record<string, string>[] = [
+    {},
+    { [K.settings]: JSON.stringify(SettingsSchema.parse({})) },
+    { [K.settings]: '{"motion":"reduced","splash":false}', [K.heist]: JSON.stringify(HeistStateSchema.parse({ activeId: "x" })), [K.map]: JSON.stringify(MapStateSchema.parse({})) },
+    { [K.heist]: JSON.stringify({ plans: [{ schema: 1, id: "p1", name: "Ünïcödé \u2028 \"quotes\" <b>", description: "", createdAt: 1, updatedAt: 2, roles: [], phases: [], notes: "x".repeat(5000) }], activeId: "p1" }) },
+  ];
+  for (const sample of samples) {
+    const src = memStore(sample);
+    const { file, skipped } = createBackup(parts, src);
+    assert.deepEqual(skipped, []);
+    const dst = memStore();
+    const plan = planRestore(JSON.stringify(file), parts, dst);
+    if (!Object.keys(sample).length) {
+      assert.equal(plan.ok, false, "an empty backup has nothing to restore");
+      continue;
+    }
+    assert.ok(plan.ok, JSON.stringify(!plan.ok && plan.error));
+    assert.ok(plan.ok && applyRestore(plan, dst).ok);
+    for (const [k, v] of Object.entries(sample)) assert.deepEqual(JSON.parse(dst.get(k)!), JSON.parse(v), k);
+  }
+});
+
+test("restore uses a durable commit when the store has one, and reports its failure", () => {
+  const { file } = createBackup(parts, memStore({ [K.settings]: '{"motion":"reduced","splash":false}', [K.heist]: '{"plans":[]}' }));
+  const dst = memStore();
+  const plan = planRestore(JSON.stringify(file), parts, dst);
+  assert.ok(plan.ok);
+  const calls: unknown[] = [];
+  const failing = { ...dst, commit: (entries: unknown) => (calls.push(entries), { ok: false as const, error: "The disk is full" }) };
+  assert.deepEqual(applyRestore(plan as never, failing), { ok: false, error: "The disk is full" });
+  assert.equal(calls.length, 1);
+  assert.equal(dst.data.size, 0, "nothing written outside the commit");
+  const working = { ...dst, commit: () => ({ ok: true as const }) };
+  assert.deepEqual(applyRestore(plan as never, working), { ok: true, restored: 2 });
+});
+
+test("a store that silently drops writes is caught and rolled back", () => {
+  const before = { [K.settings]: '{"motion":"full","splash":true}' };
+  const dst = memStore(before);
+  const lossy = { ...dst, set: (k: string, v: string) => { if (k !== K.heist) dst.set(k, v); } }; // heist never sticks
+  const { file } = createBackup(parts, memStore({ [K.settings]: '{"motion":"reduced","splash":false}', [K.heist]: '{"plans":[]}' }));
+  const plan = planRestore(JSON.stringify(file), parts, dst);
+  assert.ok(plan.ok);
+  assert.equal(applyRestore(plan as never, lossy).ok, false);
+  assert.deepEqual(Object.fromEntries(dst.data), before);
 });

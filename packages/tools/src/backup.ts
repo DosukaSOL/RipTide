@@ -24,7 +24,15 @@ export interface KeyValueStore {
   get(key: string): string | null;
   set(key: string, value: string): void;
   remove(key: string): void;
+  /**
+   * Optional: save several keys as one change, reporting success only once it's durable
+   * (the desktop app's all-or-nothing file commit). Used by applyRestore when present.
+   */
+  commit?(entries: { key: string; value: string | null }[]): { ok: true } | { ok: false; error: string };
 }
+
+/** Largest unreadable part kept in a backup's quarantine section. */
+const QUARANTINE_MAX = 5 * 1024 * 1024;
 
 /** FNV-1a over UTF-16 code units: catches truncated or hand-edited parts. Not a security check. */
 export function checksum(text: string): string {
@@ -41,18 +49,32 @@ export interface BackupFile {
   version: number;
   exportedAt: string;
   parts: Record<string, { label: string; checksum: string; data: unknown }>;
+  /**
+   * Data that couldn't be read on this device, kept as-is for support. Never restored: planRestore
+   * ignores this section.
+   */
+  quarantine?: Record<string, { label: string; reason: string; raw: string }>;
 }
 
-/** Everything stored under the given parts, readable or not, as one backup file. */
-export function createBackup(parts: BackupPart[], store: Pick<KeyValueStore, "get">, now = new Date()): { file: BackupFile; skipped: string[] } {
+/**
+ * Everything stored under the given parts as one backup file. Each part is checked against its
+ * schema first, so a backup only ever contains parts that will restore. Parts that fail are
+ * listed in `skipped` with the reason, and their raw text is kept in the file's quarantine
+ * section (not restorable) so nothing is thrown away.
+ */
+export function createBackup(parts: BackupPart[], store: Pick<KeyValueStore, "get">, now = new Date()): { file: BackupFile; skipped: { label: string; reason: string }[] } {
   const file: BackupFile = { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: now.toISOString(), parts: {} };
-  const skipped: string[] = [];
+  const skipped: { label: string; reason: string }[] = [];
+  const quarantine = (p: BackupPart, reason: string, raw: string) => {
+    skipped.push({ label: p.label, reason });
+    if (raw.length <= QUARANTINE_MAX) (file.quarantine ??= {})[p.key] = { label: p.label, reason, raw };
+  };
   for (const p of parts) {
     let raw: string | null = null;
     try {
       raw = store.get(p.key);
     } catch {
-      skipped.push(p.label);
+      skipped.push({ label: p.label, reason: "couldn't be read from this device" });
       continue;
     }
     if (raw === null) continue;
@@ -60,7 +82,12 @@ export function createBackup(parts: BackupPart[], store: Pick<KeyValueStore, "ge
     try {
       data = JSON.parse(raw);
     } catch {
-      skipped.push(p.label); // damaged on this device: say so instead of exporting garbage
+      quarantine(p, "it's damaged (not valid JSON)", raw);
+      continue;
+    }
+    const r = p.schema.safeParse(data);
+    if (!r.success) {
+      quarantine(p, `it doesn't match what RipTide expects (${summarise(r.error.issues)})`, raw);
       continue;
     }
     const text = JSON.stringify(data);
@@ -152,6 +179,11 @@ export function planRestore(text: string, parts: BackupPart[], store: Pick<KeyVa
  */
 export function applyRestore(plan: Extract<RestorePlan, { ok: true }>, store: KeyValueStore): { ok: true; restored: number } | { ok: false; error: string } {
   const todo = plan.items.filter((i): i is Extract<RestoreItem, { text: string }> => i.status === "replace");
+  if (!todo.length) return { ok: true, restored: 0 };
+  if (store.commit) {
+    const r = store.commit(todo.map((i) => ({ key: i.key, value: i.text })));
+    return r.ok ? { ok: true, restored: todo.length } : { ok: false, error: r.error };
+  }
   const before = new Map<string, string | null>();
   for (const i of todo) {
     try {
@@ -164,6 +196,7 @@ export function applyRestore(plan: Extract<RestorePlan, { ok: true }>, store: Ke
   try {
     for (const i of todo) {
       store.set(i.key, i.text);
+      if (store.get(i.key) !== i.text) throw new Error("not saved"); // check it really stuck
       written.push(i.key);
     }
   } catch {
