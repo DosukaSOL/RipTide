@@ -96,21 +96,6 @@
       ]
     },
     {
-      "id": "design-mockups",
-      "title": "Design mockups (v2)",
-      "paths": [
-        "docs/design/v2/*.png"
-      ],
-      "owner": "Dosuka",
-      "source": "Design handoff for the Tools shell",
-      "revision": "Repository history",
-      "license": "LicenseRef-RipTide",
-      "credit": "RipTide",
-      "shippedIn": [
-        "repository"
-      ]
-    },
-    {
       "id": "riptide-brand",
       "title": "RipTide logo, mark, wordmark and app icons",
       "paths": [

@@ -16,6 +16,7 @@ export const KEYS = {
   map: "riptide.map.v2",
   workspaces: "riptide.workspaces.v1",
   journey: "riptide.journey.v1",
+  mapImage: "riptide.mapimage.v1",
 } as const;
 
 /** Keys from earlier previews. Read once so their data can be cleaned up, never written. */
@@ -28,7 +29,7 @@ export const Settings = z.object({
   motion: z.enum(["system", "reduced", "full"]).default("system"),
   splash: z.boolean().default(true),
   /** Map background. Ignored when this build leaves the map art out (see basemap.ts). */
-  basemap: z.enum(["official", "schematic"]).default("official"),
+  basemap: z.enum(["official", "custom", "schematic"]).default("official"),
 });
 export type Settings = z.infer<typeof Settings>;
 

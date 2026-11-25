@@ -52,22 +52,6 @@ It doesn't read game memory, inject into game processes, automate gameplay, or t
 - Pop-out windows only talk to RipTide windows on the same origin, through a BroadcastChannel and storage events. They open without a link back to the opener. There's no `eval`, and nothing you import or type is ever rendered as HTML.
 - Running out of storage shows a warning instead of silently losing work.
 
-## Requirements from the design hand-off
-
-| Requirement | Status |
-| --- | --- |
-| Exact logo files, brand tokens and fonts (Adventor, DM Sans, Anonymous Pro) | Done. `brand/mark.svg` and `brand/lockup.png` are copied into the build |
-| No fabricated data, honest empty states, GTA VI dependencies gated | Done. Studio's example panels are labelled. Map data is credited and marked as community data |
-| Two or more tools mounted at once | Done, covered by the end-to-end test |
-| Map pops out to a second monitor and keeps its filters | Done, covered by the end-to-end test |
-| Windows recover when a monitor is unplugged | Done (`clampToScreens`, unit-tested) |
-| Keyboard support and visible focus | Done |
-| Reduced motion, motion 160–240 ms | Done |
-| 125–200% display scaling; 1920×1080, 1600×900, 1366×768 | Done, covered by the end-to-end test |
-| No Blueprint schema change without migration | Done. The Blueprint schema didn't change |
-| CLI and core tests keep passing | Done |
-| Feature flag, classic Studio stays default | Done |
-
 ## Tests
 
 ```bash
@@ -77,7 +61,3 @@ npm run e2e       # browser tests: every tool, pop-out, keep-alive, corrupt stor
 ```
 
 `npm run e2e` uses Playwright. Pass `-- --chrome /path/to/chrome` to use an installed Chrome, and `-- --shots dir` to save screenshots.
-
-## Design references
-
-The reference screens and hand-off notes are in [design/v2](design/v2).

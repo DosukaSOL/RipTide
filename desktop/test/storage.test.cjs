@@ -51,7 +51,7 @@ test("unchanged writes don't overwrite the backup", () => {
   assert.equal(fs.readFileSync(path.join(dir, "riptide.flags.v1.json.bak"), "utf8"), '{"a":1}');
 });
 
-/* ---------- audit fixes ---------- */
+/* ---------- failure cases ---------- */
 
 test("a damaged file never replaces a good backup", () => {
   const dir = tmp();

@@ -270,7 +270,7 @@ test("docker stack never contains real secrets", () => {
   assert.match(all, /DB_PASSWORD=\n/, "no default database password");
 });
 
-/* ---------- audit fixes: honest output and stricter validation ---------- */
+/* ---------- honest output and stricter validation ---------- */
 
 test("fivem build: every file the server is told to load exists, and no runtime is claimed", () => {
   const out = fivemAdapter.build(load());
@@ -397,7 +397,7 @@ test("docs/INTEGRATIONS.md is generated from the capability list and up to date"
 test("nothing claims to work 'Today' unless the manifest says it's implemented", () => {
   const doc = readFileSync(new URL("../../../docs/INTEGRATIONS.md", import.meta.url), "utf8");
   assert.doesNotMatch(doc, /\|\s*Today\b/);
-  // Things the audit found overstated stay honest.
+  // Areas that were once overstated stay honest.
   const find = (area: string) => CAPABILITIES.flatMap((s) => s.items).find((c) => c.area === area)!;
   assert.equal(find("Enforcing rules in-game").status, "future");
   assert.equal(find("Hosting").status, "simulated");
