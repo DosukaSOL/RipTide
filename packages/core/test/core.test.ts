@@ -384,3 +384,41 @@ test("docker stack says it's an example", () => {
   assert.match(out.files[0]!.contents, /EXAMPLE ONLY/);
   assert.ok(out.notes.some((n) => /Example only/.test(n)));
 });
+
+/* ---------- one status manifest ---------- */
+import { renderIntegrationsDoc, CAPABILITIES } from "../src/capabilities";
+
+test("docs/INTEGRATIONS.md is generated from the capability list and up to date", () => {
+  const onDisk = readFileSync(new URL("../../../docs/INTEGRATIONS.md", import.meta.url), "utf8");
+  assert.equal(onDisk, renderIntegrationsDoc(), "Run `npm run docs:status` after changing packages/core/src/capabilities.ts");
+});
+
+test("nothing claims to work 'Today' unless the manifest says it's implemented", () => {
+  const doc = readFileSync(new URL("../../../docs/INTEGRATIONS.md", import.meta.url), "utf8");
+  assert.doesNotMatch(doc, /\|\s*Today\b/);
+  // Things the audit found overstated stay honest.
+  const find = (area: string) => CAPABILITIES.flatMap((s) => s.items).find((c) => c.area === area)!;
+  assert.equal(find("Enforcing rules in-game").status, "future");
+  assert.equal(find("Hosting").status, "simulated");
+  assert.equal(find("Self-hosting").status, "experimental");
+  assert.equal(find("GTA VI adapter").status, "waiting-for-permission");
+  assert.notEqual(find("Time and weather").status, "implemented");
+});
+
+test("deploy preflight really checks and builds, and stops at the first failure", async () => {
+  const { deployPreflight } = await import("../src/preflight");
+  const good = deployPreflight(load());
+  assert.ok(good.ok);
+  assert.ok(good.ok && good.started > 0 && good.started <= good.enabled);
+  assert.ok(good.ok && /^ensure /m.test(good.serverCfg));
+  const invalid = structuredClone(raw);
+  invalid.meta.maxPlayers = 99999;
+  const bad = deployPreflight(invalid);
+  assert.equal(bad.ok, false);
+  assert.ok(!bad.ok && bad.stage === "check" && /maxPlayers/.test(bad.message));
+  const loop = structuredClone(raw);
+  loop.roles = [{ id: "a", name: "A", color: "#3df2d0", permissions: [], inherits: "b" }, { id: "b", name: "B", color: "#3df2d0", permissions: [], inherits: "a" }];
+  loop.access.queuePriority = [];
+  const r = deployPreflight(loop);
+  assert.ok(!r.ok && r.stage === "check" && /loop/.test(r.message));
+});

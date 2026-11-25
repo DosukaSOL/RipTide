@@ -21,7 +21,7 @@ export function Access() {
 
   return (
     <>
-      <PageHead title="Joining" sub="Decide who gets in and how. Applications arrive in Discord, where your reviewers accept them with one click." />
+      <PageHead title="Joining" sub="Plan who gets in and how. This is saved in your Blueprint, but nothing applies it on a server yet, and applications don't reach Discord yet." />
       <div className="grid g-main">
         <section className="panel">
           <div className="panel-head"><h2>Application</h2><span className="meta">{questions.length} questions</span></div>

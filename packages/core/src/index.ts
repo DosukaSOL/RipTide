@@ -16,3 +16,5 @@ export { buildDockerStack } from "./adapters/docker";
 import { fivemAdapter } from "./adapters/fivem";
 import { gta6Adapter } from "./adapters/gta6";
 export const ADAPTERS = { fivem: fivemAdapter, gta6: gta6Adapter } as const;
+export * from "./capabilities";
+export * from "./preflight";

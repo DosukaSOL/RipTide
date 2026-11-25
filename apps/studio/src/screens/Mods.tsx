@@ -52,7 +52,7 @@ export function Mods() {
     <>
       <PageHead
         title="Mods"
-        sub="Riptide checks every mod against the others and against your performance budget before anything is installed."
+        sub="Riptide checks every mod against the others and against your performance budget. Mods with conflicts are left out of the server.cfg it exports."
       />
       <div className="grid g-main">
         <div>

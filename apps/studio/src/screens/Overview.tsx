@@ -103,7 +103,7 @@ export function Overview() {
                   <div className="muted small">{p.summary}</div>
                 </div>
                 <span className={`chip ${p.state === "live" ? "sea" : "dim"}`}>{p.state === "live" ? `${p.players} testing` : "Paused"}</span>
-                <button className="btn small" onClick={() => toast(`Merged ${p.branch} into ${bp.meta.name}`)}><LuGitMerge />Merge</button>
+                <button className="btn small" onClick={() => toast("Example only: merging arrives with Riptide hosting. Nothing was changed.")}><LuGitMerge />Merge</button>
               </div>
             ))}
           </section>

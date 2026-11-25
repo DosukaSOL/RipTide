@@ -579,6 +579,28 @@ await check("browser: settings explain where data is kept", async () => {
   await ctx.close();
 });
 
+console.log("\nDeploy simulation");
+await check("deploy simulation runs the real check and build and reports mods left out", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(`${base}/?splash=0#/mods`);
+  await page.getByRole("button", { name: "Remove oxmysql" }).click();
+  await page.click('a[data-id="deploy"]');
+  await page.getByRole("button", { name: "Run deployment simulation" }).click();
+  const log = page.locator(".log");
+  await log.getByText("Checked Blueprint: no problems").waitFor();
+  await log.getByText(/Built server\.cfg: 14 of 16 enabled mods start \(2 left out, see Mods\)/).waitFor();
+  await log.getByText("Simulation complete. No server was started.").waitFor({ timeout: 8000 });
+  // What the screen reported matches the file it downloads.
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download server.cfg" }).click();
+  const file = await (await dl).path();
+  const cfg = await readFile(file, "utf8");
+  assert.equal((cfg.match(/^ensure /gm) ?? []).length, 14);
+  assert.doesNotMatch(cfg, /^ensure oxmysql$/m);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
 console.log("\nResilience");
 await check("corrupt stored data never breaks the app", async () => {
   const { ctx, page, errors } = await fresh();

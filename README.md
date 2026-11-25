@@ -85,21 +85,21 @@ You describe your server once as a **Blueprint**: rules, roles, economy, mods, v
   <img src="docs/screenshots/overview.png" alt="RipTide Studio overview: server summary, launch readiness shown as a rising sun, checklist, and example preview servers and deploy history" width="100%">
 </p>
 
-### Things nobody else does
+### What Studio does differently
 
-These ideas are new for game servers, and most of them already work in the preview.
+Most of these already work in the preview. Each row says when something isn't built yet, and [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) has the full list.
 
 | | |
 | --- | --- |
-| **Economy forecast** | Simulates 60 days of your players' wallets before launch, so you see inflation and broke newcomers coming. Autopilot can nudge taxes to keep things steady. |
-| **Plain-English rulebook** | Write *"Police need at least 4 officers online before bank robberies."* RipTide reads the rules it understands into machine-readable form, leaves the rest to staff, and publishes one rules page plus a Discord post that never drift apart. In-game enforcement needs a RipTide server runtime, which doesn't ship yet. |
+| **Economy forecast** | Simulates 60 days of your players' wallets before launch, so you see inflation and broke newcomers coming. Inside the forecast, autopilot can nudge taxes to keep things steady. |
+| **Plain-English rulebook** | Write *"Police need at least 4 officers online before bank robberies."* RipTide reads the rules it understands into machine-readable form, leaves the rest to staff, and produces one rules page plus a Discord post preview that never drift apart. RipTide doesn't post to Discord yet, and in-game enforcement needs a RipTide server runtime, which doesn't ship yet. |
 | **Mod compatibility check** | Spots duplicate systems, missing dependencies and wrong-game mods *before* you install, with one-click fixes and a worked-out start order. |
 | **Performance budget** | Server time, player memory and first-join download size, estimated for your player count while you browse mods. |
 | **Launch readiness** | A single score, drawn as a sun rising over the water. At 100 it clears the horizon. |
 | **Preview servers** | Branch your server, let staff test a change, then merge it. Coming with RipTide hosting. |
-| **Share codes** | Turn a whole server into a code that others can remix. |
+| **Share codes** | Turn a whole server into a code that others can remix, with `riptide share` and `riptide import` in the CLI. |
 | **Engine-agnostic Blueprints** | The same Blueprint exports FiveM config today and is designed to move to GTA VI later. Only the adapter changes. |
-| **Region by community** | Picks the hosting region closest to where your Discord members actually are. |
+| **Region by community** | Ranks hosting regions by distance to where your members are. It uses example locations for now: RipTide hosting and Discord sign-in aren't built yet. |
 
 <table>
   <tr>
@@ -178,7 +178,7 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 - [x] Blueprint format, compatibility check, performance budget
 - [x] Economy forecast with autopilot
-- [x] Plain-English rulebook with Discord and web output
+- [x] Plain-English rulebook with a rules page and a Discord post preview
 - [x] FiveM `server.cfg` export (mods, roles, settings) and an example docker stack
 - [ ] RipTide server runtime: applying world, economy and rules in-game
 - [x] Studio design and startup animation

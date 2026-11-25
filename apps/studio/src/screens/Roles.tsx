@@ -26,7 +26,7 @@ export function Roles() {
       <PageHead
         title="Roles"
         sub="Who can do what. Roles inherit from each other, so a moderator gets everything a citizen has. Dashed boxes are inherited."
-        actions={<button className="btn" onClick={() => toast("Role editor opens in the next build")}><LuPlus />New role</button>}
+        actions={<button className="btn" onClick={() => toast("Adding roles here isn't built yet. You can add them in the Blueprint file.")}><LuPlus />New role</button>}
       />
       <div className="grid g-main">
         <section className="panel" style={{ overflowX: "auto" }}>

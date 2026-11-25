@@ -1,125 +1,121 @@
-# Everything a server can plug in
+# What RipTide Studio does with each part of a server
 
-This is the full map of what Riptide aims to manage from one Blueprint. It is a living document: it grows as we learn what GTA VI's PC version and online framework allow.
+<!-- Generated from packages/core/src/capabilities.ts by `npm run docs:status`. Edit that file, not this one. -->
 
-How to read the status column:
+RipTide Studio designs GTA V servers and exports their FiveM `server.cfg`. It doesn't host servers, and it doesn't run anything inside a game. This page says, for every part of a Blueprint, exactly what happens to it today.
 
-- **Today**: works in the current preview on GTA V (FiveM).
-- **Next**: designed and scheduled for the first public builds.
-- **GTA VI**: waiting on Rockstar's PC release and server tooling. Designed engine-agnostic so it ports on day one.
-- **Exploring**: we want it and are working out how.
+| Status | Meaning |
+| --- | --- |
+| Works today | Works in RipTide today, inside the app or the CLI. |
+| Exported to server.cfg | Written into the FiveM server.cfg that RipTide exports. RipTide doesn't run or host the server. |
+| Simulated | Shown as a simulation or estimate. Nothing real happens (no server starts, nothing is posted). |
+| Experimental | Produces output, but it isn't ready to rely on. The note says why. |
+| Waiting for GTA VI and permission | Needs GTA VI's PC release, official server tooling and the rights to use them. Nothing is built against unreleased or unofficial interfaces. |
+| Planned | Not built yet. Where you can already set it in a Blueprint, it's saved but not applied anywhere. |
 
 ## Core game setup
 
-| Area | What you control | Status |
-| --- | --- | --- |
-| Identity | Name, tagline, tags, language, server icon, loading screen | Today |
-| Slots and queue | Max players, reserved slots, queue priority by role, supporter priority | Today |
-| Game build | Pin a game build, auto-update on a schedule or hold back | Today |
-| Framework | Qbox, QBCore, ESX Legacy, or Riptide Core (generated from your Blueprint) | Today, Riptide Core in GTA VI |
-| Database | Managed MariaDB, point-in-time restore, preview branches | Next |
-| Start order | Worked out from what each mod needs | Today |
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| Identity | Name, tagline, tags, language | Exported to server.cfg | Server icon and loading screen aren't exported. |
+| Slots | Max players | Exported to server.cfg | Reserved slots and queue priority are saved in the Blueprint but not applied. |
+| Game build | Pin a game build | Exported to server.cfg | Scheduled auto-updates aren't built. |
+| Framework | Qbox, QBCore or ESX Legacy from the catalog | Exported to server.cfg | A framework generated from your Blueprint (Riptide Core) isn't built. |
+| Start order | Worked out from what each mod needs | Exported to server.cfg |  |
+| Database | Managed database, restore points, preview branches | Planned |  |
 
 ## World
 
-| Area | What you control | Status |
-| --- | --- | --- |
-| Time | Real time, faster days, locked hour | Today |
-| Weather | Dynamic, synced for everyone, locked, scheduled storms | Today |
-| Traffic and people | Vehicle and pedestrian density, per zone overrides | Today |
-| Police | Off, AI, player-run, or both | Today |
-| PvP | On or off, per zone | Today |
-| Zones | Safe zones, speed limits, no-weapon areas, custom flags | Today |
-| Map changes | Interiors, map add-ons, removed props | Today |
-| Seasonal events | Holiday decorations, beach parties, car meets on a calendar | Next |
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| Time and weather | Real time, faster days, locked hour, synced weather | Planned | You can set it in the Blueprint. Nothing applies it in-game yet: that needs a RipTide server runtime, which doesn't exist. |
+| Traffic, police and PvP | Densities, police mode, PvP per zone | Planned | You can set it in the Blueprint. Nothing applies it in-game yet: that needs a RipTide server runtime, which doesn't exist. |
+| Zones | Safe zones, speed limits, no-weapon areas | Planned | You can set it in the Blueprint. Nothing applies it in-game yet: that needs a RipTide server runtime, which doesn't exist. |
+| Map changes | Interiors, add-ons, removed props | Planned |  |
+| Seasonal events | Decorations and events on a calendar | Planned |  |
 
 ## Economy
 
-| Area | What you control | Status |
-| --- | --- | --- |
-| Currency | Name, symbol, starting cash and bank | Today |
-| Jobs | Pay per hour, slots, how many players pick each job | Today |
-| Costs | Food, fuel, rent, repairs, vehicles and anything else players pay for | Today |
-| Taxes | Income, sales and weekly property tax with a threshold | Today |
-| Unemployment pay | Hourly support for players without a job | Today |
-| Forecast | Simulate 30 or 60 days of player wallets before launch | Today |
-| Autopilot | Nudges property tax weekly to keep the median wallet steady | Today |
-| Live economy view | Real money supply, top earners and suspicious spikes after launch | Next |
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| Currency, jobs, costs and taxes | Starting cash, pay per hour, prices, tax rules | Planned | You can set it in the Blueprint. Nothing applies it in-game yet: that needs a RipTide server runtime, which doesn't exist. |
+| Forecast | Simulate 30 or 60 days of player wallets before launch | Works today | A model inside Studio, based on your Blueprint's numbers. It isn't data from a real server. |
+| Autopilot | Nudges property tax weekly to keep the median wallet steady | Simulated | Only inside the forecast model. |
+| Live economy view | Money supply and suspicious spikes on a running server | Planned |  |
 
 ## People
 
-| Area | What you control | Status |
-| --- | --- | --- |
-| Roles | Colours, inheritance, slot limits | Today |
-| Permissions | Visual matrix, inherited permissions shown at a glance | Today |
-| Discord role sync | A Discord role grants an in-game role and back | Next |
-| Whitelist and applications | Questions, reviewers, accept from Discord | Today (design), Next (Discord flow) |
-| Account checks | Minimum account age, Discord membership | Today |
-| Staff tools | Reports, spectate, noclip, kicks and bans, audit log of staff actions | Next |
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| Roles and permissions | Colours, inheritance, permission matrix | Exported to server.cfg | Exported as ACE groups. Slot limits per role aren't applied. |
+| Discord role sync | A Discord role grants an in-game role | Planned |  |
+| Whitelist and applications | Questions, reviewers, accept from Discord | Planned | The questions can be designed in the Blueprint. |
+| Account checks | Minimum account age, Discord membership | Planned | You can set it in the Blueprint. Nothing applies it in-game yet: that needs a RipTide server runtime, which doesn't exist. |
+| Staff tools | Reports, spectate, bans, staff audit log | Planned |  |
 
 ## Rules
 
-| Area | What you control | Status |
-| --- | --- | --- |
-| Rulebook | Write rules in plain English, grouped in sections | Today |
-| Automatic enforcement | Zone rules, speed limits, minimum police online, gang size caps, new player limits, time windows, cooldowns, restarts | Today |
-| Rules page | Generated Markdown page and Discord post, always in sync | Today |
-| Rule versions | See which rules changed in each deploy | Next |
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| Rulebook | Write rules in plain English, grouped in sections | Works today | Rules RipTide understands are turned into machine-readable rules; invalid times are refused. |
+| Enforcing rules in-game | Zone rules, speed limits, police minimums, time windows, restarts | Planned | Rules are parsed, not enforced. Nothing in a game reads them yet. |
+| Rules page | Markdown page and a Discord post preview, always in sync | Works today | RipTide doesn't post to Discord; copy the preview yourself. |
+| Rule versions | See which rules changed in each deploy | Planned |  |
 
 ## Mods and content
 
-| Area | What you control | Status |
-| --- | --- | --- |
-| Catalog | Frameworks, inventory, voice, phone, HUD, housing, garages, jobs, police and EMS tools, interiors, clothing | Today |
-| Compatibility | Spots duplicates, missing dependencies, known conflicts and wrong-game mods, with one-click fixes | Today |
-| Performance budget | Server time per tick, player memory and download size before you install | Today |
-| Custom resources | Import your own scripts and assets, scanned for obvious malware patterns | Next |
-| Asset streaming | CDN for large downloads, first-join time estimate | Today (estimate), Next (CDN) |
-| Leaked or stolen assets | Blocked. Riptide refuses assets from other games and leaks | Policy |
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| Catalog | Frameworks, inventory, voice, phone, HUD, housing, jobs, interiors | Works today | Unreleased catalog entries are left out of builds. |
+| Compatibility | Duplicates, missing dependencies, conflicts, wrong-game mods, with one-click fixes | Works today |  |
+| Performance budget | Server time, player memory and download size | Works today | Estimates from catalog numbers, not measurements. |
+| Custom resources | Import your own scripts and assets | Planned |  |
+| Asset streaming | First-join download estimate, CDN for large downloads | Works today | The estimate works. The CDN isn't built. |
 
 ## Look and feel
 
-| Area | What you control | Status |
-| --- | --- | --- |
-| Visual presets | Neon Nights, Film Stock, Natural Light, more to come | Today |
-| Fine tuning | Glow, film grain, colour | Today |
-| Player opt-out | Players can switch to the default look | Today |
-| HUD theme | HUD styled from your brand colours, colour-blind safe mode | Next |
-| Loading screen | Built from your server's name, art and rules | Next |
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| Visual presets and tuning | Neon Nights, Film Stock, Natural Light; glow, grain, colour | Planned | You can set it in the Blueprint. Nothing applies it in-game yet: that needs a RipTide server runtime, which doesn't exist. |
+| HUD theme and loading screen | Styled from your brand colours | Planned |  |
 
 ## Community and growth
 
-| Area | What you control | Status |
-| --- | --- | --- |
-| Discord | Rules post, applications, role sync, log channels, deploy announcements | Next |
-| Streamers | Streamer mode that hides IPs and DMs, live badges for Twitch and Kick | Next |
-| Store | Supporter perks and queue priority through Tebex, within the platform's rules | Next |
-| Share codes | Publish a Blueprint as a code others can remix | Today |
-| Template gallery | Start from community Blueprints | Exploring |
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| Share codes | Publish a Blueprint as a code others can remix | Works today | In the CLI: riptide share and riptide import. |
+| Discord | Rules post, applications, role sync, deploy announcements | Planned |  |
+| Streamers | Streamer mode, live badges | Planned |  |
+| Store | Supporter perks through Tebex, within the platform's rules | Planned |  |
+| Template gallery | Start from community Blueprints | Planned |  |
 
 ## Running it
 
-| Area | What you control | Status |
-| --- | --- | --- |
-| Hosting | One-click deploy in eight regions, price estimate up front | Today (simulated), Next (live) |
-| Region pick | Ranked by where your Discord members are | Today |
-| Self-hosting | docker-compose stack from the CLI | Today |
-| Preview servers | Branch your server, test changes with staff, merge | Next |
-| Deploy history | Every deploy kept, one-click rollback | Next |
-| Backups | Schedule and retention | Today |
-| Restarts | Scheduled, with in-game countdown | Today |
-| Monitoring | Tick time, player count, crashes, alerts to Discord | Next |
-| DDoS protection | Included with Riptide hosting | Next |
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| Download server.cfg | The FiveM config for your Blueprint | Works today | From the Deploy screen or riptide build --target fivem. |
+| Hosting | Deploy to a region with a cost estimate | Simulated | The Deploy screen checks and builds your Blueprint for real, then simulates the hosting steps. No server starts. |
+| Region pick | Ranked by where your Discord members are | Simulated | Uses example member locations. |
+| Self-hosting | docker-compose stack from the CLI | Experimental | An example file: the Riptide images it names aren't published, so it won't start as-is. |
+| Preview servers and deploy history | Branch, test with staff, merge, roll back | Planned | The Studio overview shows example data. |
+| Backups and restarts | Database backup schedule, scheduled restarts with countdown | Planned | You can set it in the Blueprint. Nothing applies it in-game yet: that needs a RipTide server runtime, which doesn't exist. |
+| Monitoring and DDoS protection | Tick time, crashes, alerts; protection with hosting | Planned |  |
 
 ## Safety and access
 
-| Area | What you control | Status |
-| --- | --- | --- |
-| Anti-cheat | Server-side checks on money, teleports and spawned entities | Next |
-| Secrets | License keys and passwords never stored in Blueprints, only placeholders | Today |
-| Accessibility | Subtitles, colour-blind filters, text scaling, one-handed controls | Next |
-| Voice captions | Live captions in proximity voice | GTA VI |
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| Secrets | License keys and passwords never stored in Blueprints, only placeholders | Works today |  |
+| Anti-cheat checks | Server-side checks on money, teleports and spawned entities | Planned |  |
+| Accessibility on the server | Subtitles, colour-blind filters, text scaling | Planned |  |
+| Voice captions | Live captions in proximity voice | Waiting for GTA VI and permission |  |
 
 ## GTA VI
 
-Everything above is designed so it does not depend on GTA V. When Rockstar ships the PC version and its server tooling, the GTA VI adapter learns to speak it and your Blueprint moves over. We track what's known in [`packages/core/src/adapters/gta6.ts`](../packages/core/src/adapters/gta6.ts) and update it as news lands.
+| Area | What it covers | Status | What happens today |
+| --- | --- | --- | --- |
+| GTA VI adapter | Move a Blueprint to GTA VI servers | Waiting for GTA VI and permission | For now it's a passive export of your Blueprint, not a connection to any server. Nothing is built until official tooling exists and its terms allow it. |
+
+## Content RipTide won't use
+
+Leaked or stolen assets, files extracted from games, and assets from other games are refused in the catalog and won't be accepted when custom resources arrive.

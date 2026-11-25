@@ -67,7 +67,7 @@ export function Economy() {
     <>
       <PageHead
         title="Economy"
-        sub="Riptide simulates your players' wallets day by day, so you find inflation before your community does."
+        sub="Riptide simulates your players' wallets day by day, so you find inflation before your community does. The forecast is a model; these values aren't applied in-game yet."
         actions={<Segmented label="Forecast length" value={horizon} onChange={setHorizon} options={[{ value: "30", label: "30 days" }, { value: "60", label: "60 days" }]} />}
       />
       <div className="grid g-main">

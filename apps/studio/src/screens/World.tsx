@@ -80,7 +80,7 @@ export function World() {
 
   return (
     <>
-      <PageHead title="World & look" sub="Set the mood of the city: time, weather, traffic, police and the visual style every player sees." />
+      <PageHead title="World & look" sub="Plan the mood of the city: time, weather, traffic, police and the visual style. Saved in your Blueprint. Nothing applies it in-game yet: no Riptide server runtime ships today." />
       <div className="grid g-main">
         <div className="grid">
           <div className="scene">

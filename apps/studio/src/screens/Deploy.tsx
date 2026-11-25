@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LuDownload, LuTriangleAlert } from "react-icons/lu";
-import { assessReadiness, bestRegion, estimateHosting, fivemAdapter, GTA6_CAPABILITIES, REGIONS } from "@riptide/core";
+import { assessReadiness, bestRegion, estimateHosting, fivemAdapter, GTA6_CAPABILITIES, REGIONS, deployPreflight } from "@riptide/core";
 import { useStore } from "../lib/store";
 import { MEMBER_SPREAD } from "../lib/sample";
 import { PageHead, money } from "../components/ui";
@@ -10,9 +10,9 @@ type Target = "fivem" | "gta6" | "docker";
 export function Deploy() {
   const { bp, edit, toast } = useStore();
   const [target, setTarget] = useState<Target>("fivem");
-  const [state, setState] = useState<"idle" | "running" | "done">("idle");
+  const [state, setState] = useState<"idle" | "running" | "done" | "failed">("idle");
   const [progress, setProgress] = useState(0);
-  const [log, setLog] = useState<{ t: string; m: string; ok?: boolean }[]>([]);
+  const [log, setLog] = useState<{ t: string; m: string; ok?: boolean; bad?: boolean }[]>([]);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
@@ -21,11 +21,10 @@ export function Deploy() {
   const readiness = useMemo(() => assessReadiness(bp), [bp]);
   const region = REGIONS.find((r) => r.id === bp.meta.region) ?? REGIONS[0]!;
 
-  // What a real deploy would do. Only the first two steps happen here (in your browser);
-  // the rest are shown so you can see the plan. Nothing is reserved, started or posted.
-  const steps = [
-    "Checked Blueprint",
-    `Built server.cfg: ${bp.mods.filter((m) => m.enabled).length} mods in start order, roles and settings`,
+  // The first two steps really run, here in the app: the Blueprint is validated and the FiveM
+  // build is made. If either fails, the simulation stops there and says why. The hosting steps
+  // after that are only shown: nothing is reserved, started or posted.
+  const simulated = [
     `Simulated: reserve ${hosting.vcpu} vCPU in ${region.city}`,
     "Simulated: restore database snapshot",
     "Simulated: start server",
@@ -34,14 +33,30 @@ export function Deploy() {
 
   const deploy = () => {
     if (state === "running") return;
-    setState("running");
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    const stop = (m: string) => {
+      setLog((l) => [...l, { t: "0.0s", m, bad: true }]);
+      setProgress(0);
+      setState("failed");
+      toast("The simulation stopped: fix the problems in the log first.");
+    };
     setLog([]);
+    const pre = deployPreflight(bp);
+    if (!pre.ok) return stop(pre.message);
+    const left = pre.enabled - pre.started;
+    const real = [
+      { m: "Checked Blueprint: no problems", ok: true },
+      { m: `Built server.cfg: ${pre.started} of ${pre.enabled} enabled mods start${left > 0 ? ` (${left} left out, see Mods)` : ""}, plus roles and settings${pre.notes.length ? `. ${pre.notes.length} note${pre.notes.length === 1 ? "" : "s"} from the build` : ""}`, ok: true },
+    ];
+    setState("running");
     setProgress(4);
     const start = Date.now();
-    steps.forEach((m, i) => {
+    const steps = [...real, ...simulated.map((m) => ({ m, ok: false }))];
+    steps.forEach(({ m, ok }, i) => {
       timers.current.push(window.setTimeout(() => {
         const t = `${((Date.now() - start) / 1000).toFixed(1)}s`;
-        setLog((l) => [...l, { t, m }]);
+        setLog((l) => [...l, { t, m, ok }]);
         setProgress(Math.round(((i + 1) / (steps.length + 1)) * 100));
       }, 450 + i * 520));
     });
@@ -114,7 +129,7 @@ export function Deploy() {
             <section className="panel panel-pad">
               <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
                 <h2>Region</h2>
-                <span className="muted small" style={{ marginLeft: "auto" }}>Ranked by distance to your Discord members</span>
+                <span className="muted small" style={{ marginLeft: "auto" }}>Ranked by distance to example member locations</span>
               </div>
               <div className="regions">
                 {ranked.map(({ region: r, avgKm }, i) => (
@@ -172,7 +187,7 @@ export function Deploy() {
             <div className="log" aria-live="polite">
               {!log.length && <span className="muted">Run the simulation to see each step a deploy of {bp.meta.name} will take.</span>}
               {log.map((l, i) => (
-                <div key={i} className={l.ok ? "ok" : ""}><span className="t">{l.t}</span>{l.ok ? "● " : "  "}{l.m}</div>
+                <div key={i} className={l.bad ? "bad" : l.ok ? "ok" : ""}><span className="t">{l.t}</span>{l.bad ? "✕ " : l.ok ? "● " : "  "}{l.m}</div>
               ))}
             </div>
           </section>

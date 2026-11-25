@@ -23,7 +23,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "riptide": "node packages/cli/dist/riptide.mjs",
     "screenshots": "node scripts/screenshots.mjs",
-    "brand": "node scripts/brand.mjs"
+    "brand": "node scripts/brand.mjs",
+    "docs:status": "node --import tsx scripts/status-docs.mjs"
   },
   "dependencies": {
     "d3-scale": "^4.0.2",

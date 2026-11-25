@@ -7,7 +7,7 @@ Riptide is being built ahead of GTA VI on PC. Dates depend on Rockstar, so this 
 - Blueprint format and validation
 - Integration catalog, compatibility check, performance budget
 - Economy forecast with autopilot
-- Plain-English rulebook with Discord and web output
+- Plain-English rulebook with a rules page and a Discord post preview
 - FiveM `server.cfg` export (mods, roles, settings), an example docker stack, CLI
 - Studio design, brand and startup animation
 - RipTide Tools preview shell: ViceLab, Heist Ops, Interactive Map, Workspaces (see [TOOLS.md](TOOLS.md))
