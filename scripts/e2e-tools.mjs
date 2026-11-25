@@ -111,7 +111,7 @@ await check("?shell=tools turns the shell on and remembers it", async () => {
 await check("every module opens from the sidebar without errors", async () => {
   const { ctx, page, errors } = await fresh();
   await page.goto(tools("home"));
-  for (const id of ["today", "studio", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help", "home"]) {
+  for (const id of ["today", "journal", "garage", "studio", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help", "home"]) {
     await page.click(`.rt-navitem[data-tool="${id}"]`);
     await page.waitForSelector(`section[data-module="${id}"]:not([hidden])`);
     assert.equal(await page.locator(`.rt-navitem[data-tool="${id}"]`).getAttribute("aria-current"), "page");
@@ -486,7 +486,7 @@ await check("keyboard: map pans and zooms, Alt+number switches tools, focus is v
   await page.keyboard.press("/");
   assert.equal(await page.evaluate(() => document.activeElement?.id), "rt-map-q");
   await page.locator(".rt-map-stage").focus(); // tool shortcuts are ignored while typing
-  await page.keyboard.press("Alt+4");
+  await page.keyboard.press("Alt+6");
   await page.waitForFunction(() => location.hash === "#/vicelab");
   await page.goto(tools("home"));
   await page.keyboard.press("Tab");
@@ -588,6 +588,94 @@ await check("today: a route can be reordered, shortened and downloaded", async (
   assert.equal(file.format, "riptide-route");
   assert.equal(file.method, "straight-line");
   assert.equal(file.stops.length, 3);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+console.log("\nJournal, Garage and debriefs");
+await check("journal: notes, places from the map, finished goals, search, delete and restore", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(tools("map"));
+  await page.getByText(/places shown/).waitFor();
+  await page.fill("#rt-map-q", "Y Vice City");
+  await page.getByRole("option", { name: /Y Vice City.*Safehouse/ }).click();
+  await page.getByRole("button", { name: "Save to Journal" }).click();
+  await page.click('.rt-navitem[data-tool="journal"]');
+  await page.getByRole("heading", { name: "Keep the story of your run." }).waitFor();
+  await page.locator(".rt-jn-list").getByText("Visited Y Vice City").waitFor();
+  await page.fill("#rt-jn-title", "First heist");
+  await page.fill("#rt-jn-body", "We got away by boat");
+  await page.fill("#rt-jn-tags", "heist, boats");
+  await page.getByLabel("This is a milestone").check();
+  await page.getByRole("button", { name: "Add to journal" }).click();
+  await page.locator(".rt-jn-ms").getByText("First heist").waitFor();
+  await page.fill("#rt-jn-q", "#boats");
+  assert.equal(await page.locator(".rt-jn-item").count(), 1);
+  await page.fill("#rt-jn-q", "");
+  // The place link opens it on the map.
+  await page.locator(".rt-jn-place", { hasText: "Y Vice City" }).click();
+  await page.locator(".rt-place-title", { hasText: "Y Vice City" }).waitFor();
+  await page.click('.rt-navitem[data-tool="journal"]');
+  await page.getByRole("button", { name: "Delete First heist" }).click();
+  await page.getByRole("button", { name: /Recently deleted \(1\)/ }).click();
+  await page.getByRole("button", { name: "Restore" }).click();
+  await page.locator(".rt-jn-ms").getByText("First heist").waitFor();
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download as text" }).click();
+  assert.match(await readFile(await (await dl).path(), "utf8"), /First heist[\s\S]*#heist #boats/);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("garage: vehicles, properties and savings with the player's own numbers", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(tools("garage"));
+  await page.getByRole("heading", { name: "Your cars, places and plans." }).waitFor();
+  await page.fill("#rt-gr-name", "Red convertible");
+  await page.fill("#rt-gr-price", "lots");
+  await page.getByText("Prices look like 250000, 250k or 1.5m.").waitFor();
+  await page.fill("#rt-gr-price", "1.2m");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.fill("#rt-gr-name", "Old pickup");
+  await page.selectOption("#rt-gr-own", "owned");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.locator(".rt-stat", { hasText: "Wish list cost" }).getByText("$1,200,000").waitFor();
+  await page.getByRole("button", { name: "Hunt in Today" }).click();
+  await page.getByRole("tab", { name: "Properties" }).click();
+  await page.fill("#rt-pr-name", "Beach garage");
+  await page.selectOption("#rt-pr-kind", "garage");
+  await page.fill("#rt-pr-spaces", "6");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByLabel("Beach garage owned").check();
+  await page.locator(".rt-stat", { hasText: "Owned" }).getByText("5 spaces left").waitFor();
+  await page.getByRole("tab", { name: "Savings" }).click();
+  await page.selectOption("#rt-sv-for", { label: "Red convertible" });
+  assert.equal(await page.inputValue("#rt-sv-target"), "1200000", "target taken from the wanted car's price");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.fill('input[id^="rt-sv-a-"]', "300k");
+  await page.locator(".rt-gr-amt").getByRole("button", { name: "Add" }).click();
+  await page.getByText("$300,000 of $1,200,000 · $900,000 to go").waitFor();
+  await page.click('.rt-navitem[data-tool="today"]');
+  await page.locator(".rt-td-goals").getByText("Find: Red convertible").waitFor();
+  await page.reload();
+  await page.goto(tools("garage"));
+  await page.locator('section[data-module="garage"]').getByText("Red convertible").first().waitFor();
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("heist debrief: outcome and notes, run added to Today, saved to the journal", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(tools("heist"));
+  await page.getByRole("button", { name: "Create plan" }).click();
+  await page.getByRole("button", { name: "Add the run to Today" }).click();
+  await page.getByRole("button", { name: "In Today" }).waitFor();
+  await page.getByRole("group", { name: "How did it go?" }).getByRole("button", { name: "Partly" }).click();
+  await page.fill("#rt-debrief-notes", "Driver was late");
+  await page.getByRole("button", { name: "Save to Journal" }).click();
+  await page.click('.rt-navitem[data-tool="journal"]');
+  await page.locator(".rt-jn-ms").getByText(/: Partly$/).waitFor();
+  await page.locator(".rt-jn-ms").getByText("Driver was late").waitFor();
   assert.deepEqual(errors, []);
   await ctx.close();
 });
@@ -871,7 +959,7 @@ const SIZES = [
 for (const s of SIZES) {
   await check(`${s.name}: every tool fits with no sideways scrolling`, async () => {
     const { ctx, page, errors } = await fresh(s.vp, s.dpr);
-    for (const id of ["home", "today", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help", "studio"]) {
+    for (const id of ["home", "today", "journal", "garage", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help", "studio"]) {
       await page.goto(tools(id));
       await page.waitForSelector(`section[data-module="${id}"]:not([hidden])`);
       await page.waitForTimeout(250);

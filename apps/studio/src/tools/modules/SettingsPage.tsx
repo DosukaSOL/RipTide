@@ -3,7 +3,7 @@ import { LuDownload, LuUpload, LuRotateCcw, LuFolderOpen, LuHardDrive, LuGlobe }
 import { commitKeys, desktopBridge, desktopWriteFailed } from "../../desktop";
 import { z } from "zod";
 import { Blueprint } from "@riptide/core";
-import { applyRestore, availableBasemaps, BACKUP_MAX_BYTES, createBackup, Flags, HeistState, JourneyState, KEYS, LEGACY_KEYS, MapState, planRestore, Settings, ViceLabState, WorkspacesState, type BackupPart, type RestorePlan } from "@riptide/tools";
+import { applyRestore, availableBasemaps, BACKUP_MAX_BYTES, createBackup, Flags, GarageState, HeistState, JournalState, JourneyState, KEYS, LEGACY_KEYS, MapState, planRestore, Settings, ViceLabState, WorkspacesState, type BackupPart, type RestorePlan } from "@riptide/tools";
 import { PageHeader, SettingRow, Switch, useShell } from "../ui";
 import { HeaderRight } from "./common";
 import { readFlags, useToolsData, writeFlags } from "../data";
@@ -19,6 +19,8 @@ const DATA_KEYS: BackupPart[] = [
   { key: KEYS.heist, label: "Heist Ops plans", schema: HeistState },
   { key: KEYS.map, label: "Map progress, markers, filters and packs", schema: MapState },
   { key: KEYS.journey, label: "Today: goals, sessions and routes", schema: JourneyState },
+  { key: KEYS.journal, label: "Journal", schema: JournalState },
+  { key: KEYS.garage, label: "Garage: vehicles, properties and savings", schema: GarageState },
   { key: KEYS.workspaces, label: "Workspaces", schema: WorkspacesState },
   { key: KEYS.settings, label: "Settings", schema: Settings },
 ];

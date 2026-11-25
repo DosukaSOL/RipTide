@@ -819,3 +819,51 @@ test("your own map image: whole-map fit and lining up with places", async () => 
   assert.match(svgMatrix(fit), /^matrix\(8 -?0 -?0 8 -16384 -16384\)$/);
   assert.equal(MapImage.safeParse({ type: "image/svg+xml", width: 1, height: 1, bytes: 1, addedAt: 1 }).success, false, "SVG is never accepted");
 });
+
+/* ---------- Journal and Garage ---------- */
+import { createEntry, garageTotals, GarageState, JournalState, journalMarkdown, newProperty, newVehicle, parseAmount, purgeTrash, restoreEntry, searchEntries, tagCounts, trashEntry } from "../src/ledger";
+import { Plan as PlanSchema } from "../src/heist";
+
+test("journal: search by words and #tags, deleted entries can be restored for 30 days", () => {
+  const s = JournalState.parse({});
+  const a = createEntry({ profileId: "main", title: "Marina run", body: "Boat was gone", tags: ["Heist", "boats"] }, 1);
+  const b = createEntry({ profileId: "main", body: "Found the diner", tags: ["food"], place: placeRef({ id: "P1", title: "Seven Seas Seafood", x: 1, y: 2 }) }, 2);
+  s.entries.push(a, b);
+  assert.deepEqual(a.tags, ["heist", "boats"], "tags are lower-case");
+  assert.deepEqual(searchEntries(s.entries, "#heist").map((e) => e.id), [a.id]);
+  assert.deepEqual(searchEntries(s.entries, "seafood").map((e) => e.id), [b.id], "matches the place name");
+  assert.deepEqual(searchEntries(s.entries, "boat gone").map((e) => e.id), [a.id]);
+  assert.equal(searchEntries(s.entries, "").length, 2);
+  assert.deepEqual(tagCounts(s.entries)[0], ["boats", 1]);
+  trashEntry(s, a.id, 1000);
+  assert.equal(s.entries.length, 1);
+  restoreEntry(s, a.id);
+  assert.equal(s.entries.length, 2);
+  assert.equal(s.trash.length, 0);
+  trashEntry(s, b.id, 0);
+  purgeTrash(s, 31 * 86400000);
+  assert.equal(s.trash.length, 0, "gone after 30 days");
+  assert.match(journalMarkdown([a]), /## 1970-01-01 · Marina run\n\nBoat was gone\n\n#heist #boats/);
+  assert.equal(JournalState.safeParse({ entries: [{ id: "x", createdAt: 1, body: "x".repeat(5000) }] }).success, false);
+});
+
+test("garage: totals come only from the player's own numbers; amounts parse like people type them", () => {
+  const g = GarageState.parse({});
+  g.vehicles.push(newVehicle({ name: "Coupe", ownership: "owned", profileId: "main" }), newVehicle({ name: "Bike", ownership: "wanted", price: 50000, profileId: "main" }), newVehicle({ name: "Boat", ownership: "wanted", profileId: "main" }), newVehicle({ name: "Other run", ownership: "owned", profileId: "second" }));
+  g.properties.push(newProperty({ name: "Garage", kind: "garage", owned: true, spaces: 10, profileId: "main" }));
+  const t = garageTotals(g, "main");
+  assert.deepEqual([t.owned, t.wanted, t.wantedCost, t.unpriced, t.spaces, t.spacesLeft], [1, 2, 50000, 1, 10, 9]);
+  assert.equal(garageTotals(GarageState.parse({}), "main").spacesLeft, undefined, "no spaces entered, no count");
+  assert.equal(parseAmount("1,250,000"), 1250000);
+  assert.equal(parseAmount("$1.5m"), 1500000);
+  assert.equal(parseAmount("250k"), 250000);
+  assert.equal(parseAmount("lots"), null);
+  assert.equal(parseAmount("-5"), null);
+});
+
+test("heist plans without a debrief still load; a debrief is checked", () => {
+  const base = { schema: 1, id: "p1", name: "Job", description: "", createdAt: 1, updatedAt: 1, roles: [], phases: [], notes: "" };
+  assert.ok(PlanSchema.safeParse(base).success);
+  assert.ok(PlanSchema.safeParse({ ...base, debrief: { outcome: "partial", notes: "ok", at: 2 } }).success);
+  assert.equal(PlanSchema.safeParse({ ...base, debrief: { outcome: "won-a-million", at: 2 } }).success, false);
+});

@@ -12,6 +12,7 @@ import {
   LuStar,
   LuSunrise,
   LuRoute,
+  LuNotebookPen,
   LuTrash2,
   LuMapPin,
   LuFilter,
@@ -59,6 +60,8 @@ import {
   worldToScreen,
   type MapImage,
   JourneyState,
+  JournalState,
+  createEntry,
   createObjective,
   formatDistance,
   pathLength,
@@ -83,6 +86,7 @@ import { useMapImage } from "../mapimage";
 
 const mapDefault = () => MapState.parse({});
 const journeyDefault = () => JourneyState.parse({});
+const journalDefault = () => JournalState.parse({});
 const PROV_TONE: Record<string, string> = { official: "rt-sea", verified: "rt-sea", community: "rt-sun", personal: "rt-pink" };
 const colorOf = (r: Pick<MapRecord, "category">) => categoryById(r.category)?.color ?? PERSONAL_COLOR;
 const fmt = (n: number) => n.toLocaleString("en-US");
@@ -126,6 +130,7 @@ function MapBody() {
   const basemap = pickBasemap(settings.basemap, { artBuilt: MAP_ART_BUILT, tilesLoaded: !!data.manifest, customLoaded: !!(image.meta && image.url) });
   const [s, set, storageError] = usePersisted(KEYS.map, MapState, mapDefault);
   const [journey, setJourney] = usePersisted(KEYS.journey, JourneyState, journeyDefault);
+  const [, setJournal] = usePersisted(KEYS.journal, JournalState, journalDefault);
   const shownRoute = journey.routes.find((r) => r.id === journey.shownRouteId);
   const [view, setView] = useState<View>(() => clampView(s.view));
   const [placing, setPlacing] = useState(false);
@@ -499,6 +504,10 @@ function MapBody() {
                 onToday={() => {
                   setJourney((d) => void d.objectives.push(createObjective({ title: selected.title, type: typeForCategory(selected.category), place: placeRef(selected), profileId: s.activeProfile })));
                   toast("Added to Today");
+                }}
+                onJournal={() => {
+                  setJournal((d) => void d.entries.push(createEntry({ profileId: s.activeProfile, title: `Visited ${selected.title}`, place: placeRef(selected) })));
+                  toast("Saved to Journal");
                 }}
                 routeName={shownRoute?.name ?? ""}
                 onRoute={() => {
@@ -1026,6 +1035,7 @@ function Details(props: {
   record: MapRecord;
   inToday: boolean;
   onToday: () => void;
+  onJournal: () => void;
   routeName: string;
   onRoute: () => void;
   found: boolean;
@@ -1118,6 +1128,7 @@ function Details(props: {
           <LuStar style={props.favorite ? { color: "var(--rt-sun)", fill: "var(--rt-sun)" } : undefined} />{props.favorite ? "Favourite" : "Add to favourites"}
         </button>
         <button className="rt-btn rt-sm" disabled={props.inToday} onClick={props.onToday}><LuSunrise />{props.inToday ? "In Today" : "Add to Today"}</button>
+        <button className="rt-btn rt-sm" onClick={props.onJournal}><LuNotebookPen />Save to Journal</button>
         <button className="rt-btn rt-sm" onClick={props.onRoute} title={props.routeName ? `Adds this place to ${props.routeName}` : "Starts a new route"}><LuRoute />{props.routeName ? "Add to route" : "Start a route"}</button>
         {personal && <button className="rt-btn rt-sm rt-danger" onClick={props.onDelete}><LuTrash2 />Delete</button>}
       </div>

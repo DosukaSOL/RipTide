@@ -603,3 +603,31 @@
 .rt-mapimg-points .rt-iconbtn { width: 28px; height: 28px; }
 .rt-fit.rt-good { color: var(--rt-sea); }
 .rt-fit.rt-bad { color: #ff8cbd; }
+
+/* Journal */
+.rt-jn-sicon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--rt-muted); width: 16px; height: 16px; pointer-events: none; }
+.rt-search:has(.rt-jn-sicon) .rt-input { padding-left: 40px; }
+.rt-jn-list { list-style: none; margin: 16px 0 0; padding: 0; }
+.rt-jn-day { margin: 18px 0 6px; font-size: 12.5px; font-weight: 700; color: var(--rt-muted); }
+.rt-jn-day:first-child { margin-top: 0; }
+.rt-jn-item { display: flex; gap: 14px; align-items: flex-start; padding: 10px 0 10px 14px; border-left: 2px solid var(--rt-line-2); }
+.rt-jn-item.rt-jn-ms { border-left-color: var(--rt-sun); }
+.rt-jn-item.rt-jn-goal, .rt-jn-item.rt-jn-session { border-left-color: rgba(61, 242, 208, .5); }
+.rt-jn-time { flex: none; width: 46px; font-size: 12.5px; color: var(--rt-faint); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.rt-jn-item .rt-td-title svg { width: 14px; height: 14px; margin-right: 6px; color: var(--rt-sun); vertical-align: -2px; }
+.rt-jn-body { margin: 4px 0 0; color: var(--rt-sub); font-size: 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rt-jn-item button.rt-badge { cursor: pointer; background: transparent; font: inherit; font-size: 12px; }
+.rt-jn-item .rt-badge svg { width: 12px; height: 12px; }
+
+/* Garage */
+.rt-gr-add { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; }
+.rt-gr-add.rt-gr-add5 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) 96px auto; }
+.rt-gr-add .rt-input, .rt-gr-add .rt-select { height: 42px; font-size: 14.5px; }
+.rt-gr-detail { flex-basis: 100%; padding: 10px 0 4px 44px; }
+.rt-gr-detail .rt-select { max-width: 220px; height: 38px; font-size: 14px; }
+.rt-gr-detail .rt-inline-row .rt-input { height: 36px; font-size: 14px; }
+.rt-gr-amt { flex: none; }
+.rt-gr-amt .rt-input { width: 120px; height: 34px; font-size: 14px; }
+.rt-td-goals .rt-td-bar { margin-top: 8px; max-width: 420px; }
+.rt-td-empty svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 4px; }
+@media (max-width: 900px) { .rt-gr-add, .rt-gr-add.rt-gr-add5 { grid-template-columns: 1fr 1fr; } .rt-gr-detail { padding-left: 0; } }

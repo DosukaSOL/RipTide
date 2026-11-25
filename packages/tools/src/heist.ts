@@ -32,6 +32,14 @@ export const Plan = z.object({
     )
     .max(12),
   notes: Text(8000),
+  /** How it went, filled in by the crew after the run. */
+  debrief: z
+    .object({
+      outcome: z.enum(["success", "partial", "failed"]),
+      notes: Text(2000).default(""),
+      at: z.number().int().nonnegative(),
+    })
+    .optional(),
 });
 export type Plan = z.infer<typeof Plan>;
 

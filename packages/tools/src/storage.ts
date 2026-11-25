@@ -17,6 +17,8 @@ export const KEYS = {
   workspaces: "riptide.workspaces.v1",
   journey: "riptide.journey.v1",
   mapImage: "riptide.mapimage.v1",
+  journal: "riptide.journal.v1",
+  garage: "riptide.garage.v1",
 } as const;
 
 /** Keys from earlier previews. Read once so their data can be cleaned up, never written. */
@@ -150,7 +152,7 @@ export type MapState = z.infer<typeof MapState>;
 
 const Geometry = z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() });
 
-export const ToolId = z.enum(["home", "today", "studio", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help"]);
+export const ToolId = z.enum(["home", "today", "journal", "garage", "studio", "vicelab", "heist", "map", "workspaces", "roadmap", "settings", "help"]);
 export type ToolId = z.infer<typeof ToolId>;
 
 export const Workspace = z.object({

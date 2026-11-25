@@ -1,11 +1,14 @@
 import { useId, useRef, useState } from "react";
 import { LuPencil, LuPlus, LuDownload, LuUpload, LuTrash2, LuChevronDown, LuChevronRight, LuX, LuCheck } from "react-icons/lu";
-import { KEYS, HeistState, TEMPLATES, createPlan, exportPlan, nextStatus, parsePlanFile, progress, uid, type Plan, type PhaseStatus } from "@riptide/tools";
+import { KEYS, HeistState, JournalState, JourneyState, MapState, TEMPLATES, createEntry, createObjective, createPlan, exportPlan, nextStatus, parsePlanFile, progress, uid, type Plan, type PhaseStatus } from "@riptide/tools";
 import { usePersisted, downloadText, readFileText } from "../persist";
 import { PageHeader, useShell } from "../ui";
 import { DetachedGuard, HeaderRight } from "./common";
 
 const hoDefault = () => HeistState.parse({});
+const journeyDefault = () => JourneyState.parse({});
+const journalDefault = () => JournalState.parse({});
+const mapDefault = () => MapState.parse({});
 const STATUS_LABEL: Record<PhaseStatus, string> = { "not-started": "Not started", "in-progress": "In progress", done: "Done" };
 const clean = (s: string, max: number) => s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").slice(0, max);
 
@@ -104,6 +107,8 @@ function HeistBody() {
             </div>
           </section>
 
+          {editing && <Debrief plan={plan!} update={update} />}
+
           <section className="rt-panel rt-pad" aria-labelledby="rt-notes" style={{ paddingTop: 26 }}>
             <div className="rt-notes-row">
               <div style={{ minWidth: 0 }}>
@@ -115,10 +120,10 @@ function HeistBody() {
                       const v = clean(e.target.value, 8000);
                       update((pl) => void (pl.notes = v));
                     }} />
-                    <p className="rt-hint">Notes stay on this device. Live crew rooms will connect everyone when online sync launches; until then, export the plan and share the file.</p>
+                    <p className="rt-hint">Notes stay on this device. To share them, export the plan and send the file to your crew.</p>
                   </>
                 ) : (
-                  <p style={{ margin: "12px 0 0", color: "var(--rt-sub)", maxWidth: "60ch" }}>Give the team one place for decisions and reminders. Live crew rooms will connect everyone when online sync launches.</p>
+                  <p style={{ margin: "12px 0 0", color: "var(--rt-sub)", maxWidth: "60ch" }}>Give the team one place for decisions and reminders. Share the plan with your crew as a file.</p>
                 )}
               </div>
               {!editing && (
@@ -283,5 +288,47 @@ function DeletePlan({ name, onDelete }: { name: string; onDelete: () => void }) 
     </span>
   ) : (
     <button className="rt-btn rt-sm rt-ghost" onClick={() => setConfirm(true)}><LuTrash2 />Delete plan</button>
+  );
+}
+
+/** After the run: how it went, in the crew's own words, with links to Today and the Journal. */
+function Debrief({ plan, update }: { plan: Plan; update: (fn: (p: Plan) => void) => void }) {
+  const { toast } = useShell();
+  const [journey, setJourney] = usePersisted(KEYS.journey, JourneyState, journeyDefault);
+  const [, setJournal] = usePersisted(KEYS.journal, JournalState, journalDefault);
+  const [m] = usePersisted(KEYS.map, MapState, mapDefault);
+  const profileId = m.profiles.some((p) => p.id === m.activeProfile) ? m.activeProfile : m.profiles[0]!.id;
+  const d = plan.debrief;
+  const inToday = journey.objectives.some((o) => o.title === `Run: ${plan.name}` && o.status !== "done" && o.profileId === profileId);
+  const OUTCOMES = [["success", "Success"], ["partial", "Partly"], ["failed", "Didn't work"]] as const;
+  return (
+    <section className="rt-panel rt-pad" aria-labelledby="rt-debrief" style={{ paddingTop: 26 }}>
+      <div className="rt-td-head" style={{ marginTop: 0 }}>
+        <div className="rt-kicker" id="rt-debrief">DEBRIEF</div>
+        <button className="rt-btn rt-sm" disabled={inToday} onClick={() => { setJourney((j) => void j.objectives.push(createObjective({ title: `Run: ${plan.name}`, type: "quest", priority: "high", profileId }))); toast("Added to Today"); }}>
+          {inToday ? "In Today" : "Add the run to Today"}
+        </button>
+      </div>
+      <div className="rt-pill-row" role="group" aria-label="How did it go?">
+        {OUTCOMES.map(([id, label]) => (
+          <button key={id} className={`rt-td-chip${d?.outcome === id ? " rt-on" : ""}`} aria-pressed={d?.outcome === id} onClick={() => update((p) => void (p.debrief = { outcome: id, notes: p.debrief?.notes ?? "", at: Date.now() }))}>{label}</button>
+        ))}
+      </div>
+      {d ? (
+        <>
+          <label className="rt-sr" htmlFor="rt-debrief-notes">Debrief notes</label>
+          <textarea id="rt-debrief-notes" className="rt-textarea" style={{ marginTop: 12 }} maxLength={2000} placeholder="What went well, what to change next time" value={d.notes} onChange={(e) => { const v = clean(e.target.value, 2000); update((p) => void (p.debrief && (p.debrief.notes = v))); }} />
+          <div className="rt-td-actions" style={{ marginTop: 10 }}>
+            <button className="rt-btn rt-sm" onClick={() => {
+              const label = OUTCOMES.find(([id]) => id === d.outcome)![1];
+              setJournal((j) => void j.entries.push(createEntry({ profileId, kind: "milestone", title: `${plan.name}: ${label}`, body: d.notes, tags: ["heist"] })));
+              toast("Saved to Journal");
+            }}>Save to Journal</button>
+          </div>
+        </>
+      ) : (
+        <p className="rt-hint">After the run, pick how it went and note what to change. Only your crew's words: RipTide doesn't read the game.</p>
+      )}
+    </section>
   );
 }

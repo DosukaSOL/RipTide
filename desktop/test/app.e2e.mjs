@@ -225,5 +225,16 @@ await step("a goal added in Today is saved to disk", async () => {
   await win.waitForTimeout(600);
   assert.match(readFileSync(join(dataDir, "riptide.journey.v1.json"), "utf8"), /Find the lighthouse/);
 });
+await step("journal and garage entries are saved to disk", async () => {
+  await go(win, "#/journal");
+  await win.fill("#rt-jn-body", "Packaged app note");
+  await win.getByRole("button", { name: "Add to journal" }).click();
+  await go(win, "#/garage");
+  await win.fill("#rt-gr-name", "Packaged car");
+  await win.getByRole("button", { name: "Add", exact: true }).click();
+  await win.waitForTimeout(600);
+  assert.match(readFileSync(join(dataDir, "riptide.journal.v1.json"), "utf8"), /Packaged app note/);
+  assert.match(readFileSync(join(dataDir, "riptide.garage.v1.json"), "utf8"), /Packaged car/);
+});
 await closeApp(app);
 console.log(`\n${passed} desktop checks passed (data in ${dataDir})`);
