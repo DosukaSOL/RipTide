@@ -7,7 +7,6 @@ import {
   validateBlueprint,
   effectivePermissions,
   checkCompatibility,
-  estimateBudget,
   forecastEconomy,
   gini,
   compileRulebook,
@@ -19,7 +18,6 @@ import {
   resolveLoadOrder,
   FIVEM_CAPABILITIES,
   assessReadiness,
-  estimateHosting,
   bestRegion,
   shortCode,
   encodeBlueprint,
@@ -27,7 +25,6 @@ import {
   diffBlueprints,
   fivemAdapter,
   gta6Adapter,
-  buildDockerStack,
   type Blueprint,
 } from "../src/index";
 
@@ -79,13 +76,13 @@ test("compatibility: example is clean and dependencies load first", () => {
   assert.equal(r.ok, true, JSON.stringify(r.issues));
   const pos = (id: string) => r.loadOrder.indexOf(id);
   assert.ok(pos("oxmysql") < pos("qbox"));
-  assert.ok(pos("qbox") < pos("ox-inventory"));
-  assert.ok(pos("pma-voice") < pos("lb-phone"));
+  assert.ok(pos("ox-lib") < pos("qbox"));
+  assert.ok(pos("oxmysql") < pos("ox-inventory") && pos("ox-lib") < pos("ox-inventory"));
 });
 
 test("compatibility: flags exclusive overlap, missing deps and wrong engine", () => {
   const bp = load();
-  bp.mods.push({ id: "esx", enabled: true }, { id: "saltychat", enabled: true }, { id: "nope", enabled: true });
+  bp.mods.push({ id: "esx", enabled: true }, { id: "nope", enabled: true });
   bp.mods = bp.mods.filter((m) => m.id !== "oxmysql");
   const r = checkCompatibility(bp);
   const codes = r.issues.map((i) => i.code);
@@ -104,15 +101,6 @@ test("disabled mods are ignored", () => {
   const bp = load();
   bp.mods.push({ id: "esx", enabled: false });
   assert.equal(checkCompatibility(bp).ok, true);
-});
-
-test("budget sums and scales with players", () => {
-  const bp = load();
-  const small = estimateBudget({ ...bp, meta: { ...bp.meta, maxPlayers: 32 } });
-  const big = estimateBudget({ ...bp, meta: { ...bp.meta, maxPlayers: 512 } });
-  assert.ok(big.totals.serverMs > small.totals.serverMs);
-  assert.equal(small.totals.streamMB, big.totals.streamMB);
-  assert.ok(["comfortable", "tight", "over"].includes(small.verdict));
 });
 
 test("economy forecast is deterministic", () => {
@@ -182,10 +170,7 @@ test("readiness scores the example highly", () => {
   assert.ok(r.score >= 80, `score ${r.score}: ${JSON.stringify(r.checks.filter((c) => !c.passed))}`);
 });
 
-test("hosting estimate and region pick", () => {
-  const bp = load();
-  const h = estimateHosting(bp);
-  assert.ok(h.monthlyUsd > 0 && h.vcpu >= 2);
+test("region distance ranking", () => {
   const best = bestRegion([{ lat: 40.7, lon: -74 }, { lat: 42.3, lon: -71 }]);
   assert.equal(best[0]!.region.id, "us-mia");
 });
@@ -204,11 +189,11 @@ test("diff finds keyed changes", () => {
   const a = load();
   const b = load();
   b.meta.maxPlayers = 200;
-  b.mods = b.mods.filter((m) => m.id !== "lb-phone");
+  b.mods = b.mods.filter((m) => m.id !== "pma-voice");
   b.roles.push({ id: "vip", name: "VIP", color: "#FFFFFF", permissions: [] });
   const d = diffBlueprints(a, b);
   assert.ok(d.some((c) => c.path === "meta.maxPlayers" && c.kind === "changed"));
-  assert.ok(d.some((c) => c.path === "mods[lb-phone]" && c.kind === "removed"));
+  assert.ok(d.some((c) => c.path === "mods[pma-voice]" && c.kind === "removed"));
   assert.ok(d.some((c) => c.path === "roles[vip]" && c.kind === "added"));
   assert.deepEqual(diffBlueprints(a, load()), []);
 });
@@ -219,7 +204,8 @@ test("fivem adapter writes ordered cfg with secrets as placeholders", () => {
   const cfg = out.files.find((f) => f.path === "server.cfg")!.contents;
   assert.match(cfg, /sv_maxclients 128/);
   assert.match(cfg, /\{\{secret:CFX_LICENSE_KEY\}\}/);
-  assert.ok(cfg.indexOf("ensure oxmysql") < cfg.indexOf("ensure qbox"));
+  assert.ok(cfg.indexOf("ensure oxmysql") < cfg.indexOf("ensure qbx_core"), "real resource folder names");
+  assert.match(cfg, /^ensure ox_inventory$/m);
   assert.match(cfg, /add_principal group.admin group.mod/);
 });
 
@@ -261,15 +247,6 @@ test("gta6 adapter waits and bundles", () => {
   assert.ok(out.files.some((f) => f.path === "bundle/blueprint.json"));
 });
 
-test("docker stack never contains real secrets", () => {
-  const out = buildDockerStack(load());
-  const all = out.files.map((f) => f.contents).join("\n");
-  assert.match(all, /\$\{CFX_LICENSE_KEY\}/);
-  assert.ok(!/cfxk_[A-Za-z0-9]/.test(all));
-  assert.match(all, /127\.0\.0\.1:40120:40120/, "admin panel is not exposed publicly");
-  assert.match(all, /DB_PASSWORD=\n/, "no default database password");
-});
-
 /* ---------- honest output and stricter validation ---------- */
 
 test("fivem build: every file the server is told to load exists, and no runtime is claimed", () => {
@@ -284,7 +261,8 @@ test("fivem build: every file the server is told to load exists, and no runtime 
       assert.ok(paths.has(dir + m[1]), `${f.path} loads ${m[1]}, which isn't in the build`);
     }
   }
-  for (const m of cfg.matchAll(/^ensure (\S+)/gm)) assert.ok(CATALOG_BY_ID.has(m[1]!), `ensure ${m[1]} isn't a catalog mod`);
+  const resources = new Set([...CATALOG_BY_ID.values()].map((c) => c.resource));
+  for (const m of cfg.matchAll(/^ensure (\S+)/gm)) assert.ok(resources.has(m[1]!), `ensure ${m[1]} isn't a catalog resource`);
   assert.equal(fivemAdapter.status, "config");
   assert.ok(out.notes.some((n) => /Configuration only/.test(n)));
   const ref = JSON.parse(out.files.find((f) => f.path === "riptide/blueprint-config.json")!.contents);
@@ -294,11 +272,12 @@ test("fivem build: every file the server is told to load exists, and no runtime 
 
 test("fivem build leaves out mods that aren't released", () => {
   const bp = load();
-  bp.mods.push({ id: "riptide-voice", enabled: true } as never);
-  const cfg = fivemAdapter.build(bp).files[0]!.contents;
-  assert.ok(!/ensure riptide-voice/.test(cfg));
-  const compat = checkCompatibility(bp);
+  const planned = new Map(CATALOG_BY_ID);
+  planned.set("future-mod", { ...CATALOG_BY_ID.get("pma-voice")!, id: "future-mod", resource: "future-mod", provides: ["future"], exclusive: [], status: "planned" });
+  bp.mods.push({ id: "future-mod", enabled: true } as never);
+  const compat = checkCompatibility(bp, planned);
   assert.ok(compat.issues.some((i) => i.code === "planned" && /isn't released yet/.test(i.message)));
+  assert.ok(!compat.loadOrder.includes("future-mod"));
 });
 
 test("clock times: real times only", () => {
@@ -379,12 +358,6 @@ test("load order: one provider per need, so two providers don't make a false loo
   assert.ok(order.indexOf("b") < order.indexOf("c"));
 });
 
-test("docker stack says it's an example", () => {
-  const out = buildDockerStack(load());
-  assert.match(out.files[0]!.contents, /EXAMPLE ONLY/);
-  assert.ok(out.notes.some((n) => /Example only/.test(n)));
-});
-
 /* ---------- one status manifest ---------- */
 import { renderIntegrationsDoc, CAPABILITIES } from "../src/capabilities";
 
@@ -400,8 +373,8 @@ test("nothing claims to work 'Today' unless the manifest says it's implemented",
   // Areas that were once overstated stay honest.
   const find = (area: string) => CAPABILITIES.flatMap((s) => s.items).find((c) => c.area === area)!;
   assert.equal(find("Enforcing rules in-game").status, "future");
-  assert.equal(find("Hosting").status, "simulated");
-  assert.equal(find("Self-hosting").status, "experimental");
+  assert.equal(find("Hosting").status, "future");
+  assert.equal(find("Self-hosting").status, "future");
   assert.equal(find("GTA VI adapter").status, "waiting-for-permission");
   assert.notEqual(find("Time and weather").status, "implemented");
 });
@@ -446,16 +419,18 @@ test("FiveM edition: Legacy is unchanged; Enhanced skips the build pin and says 
 
 test("FiveM edition: graphic mods are blocked and Mumble voice is flagged on Enhanced", async () => {
   const { checkCompatibility } = await import("../src/compatibility");
-  const mods = [{ id: "graphics-neon", enabled: true }, { id: "pma-voice", enabled: true }];
+  const mods = [{ id: "pma-voice", enabled: true }];
   const legacy = checkCompatibility({ mods, engine: { target: "fivem", edition: "legacy" } } as any);
   assert.ok(!legacy.issues.some((i) => /Enhanced/.test(i.message)));
   const enh = checkCompatibility({ mods, engine: { target: "fivem", edition: "enhanced" } } as any);
-  const neon = enh.issues.find((i) => i.mods.includes("graphics-neon"))!;
-  assert.equal(neon.level, "error");
-  assert.deepEqual(neon.fix?.remove, ["graphics-neon"]);
   const voice = enh.issues.find((i) => i.code === "enhanced-voice")!;
   assert.equal(voice.level, "warning");
-  assert.ok(!enh.loadOrder.includes("graphics-neon"));
+  // A graphics mod (none in the catalog today) would be blocked.
+  const g = new Map(CATALOG_BY_ID);
+  g.set("gfx", { ...CATALOG_BY_ID.get("pma-voice")!, id: "gfx", resource: "gfx", category: "visuals", summary: "Graphics", provides: ["timecycle"], exclusive: [] });
+  const withGfx = checkCompatibility({ mods: [{ id: "gfx", enabled: true }], engine: { target: "fivem", edition: "enhanced" } } as any, g);
+  assert.equal(withGfx.issues.find((i) => i.mods.includes("gfx"))?.level, "error");
+  assert.ok(!withGfx.loadOrder.includes("gfx"));
 });
 
 test("GTA VI facts are dated, sourced as confirmed or reported, and never promise a day-one move", async () => {
@@ -467,4 +442,17 @@ test("GTA VI facts are dated, sourced as confirmed or reported, and never promis
   assert.notEqual(by("GTA VI Online").status, "confirmed");
   const text = JSON.stringify(GTA6_CAPABILITIES) + gta6Adapter.build(load()).notes.join(" ");
   assert.doesNotMatch(text, /day one|the day support|ships with GTA VI/i);
+});
+
+test("the catalog is real: every entry names its resource folder, source and licence", () => {
+  for (const c of CATALOG_BY_ID.values()) {
+    assert.match(c.resource, /^[a-z0-9_-]+$/i, c.id);
+    assert.match(c.source, /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/, `${c.id} links its source`);
+    assert.ok(c.license, `${c.id} states a licence`);
+    assert.ok(!("cost" in c), `${c.id} has no invented performance numbers`);
+    assert.notEqual(c.author, "Riptide", "RipTide publishes no server resources");
+  }
+  // Starter Blueprint only uses real catalog resources, and builds cleanly.
+  const cfg = fivemAdapter.build(load()).files.find((f) => f.path === "server.cfg")!.contents;
+  assert.deepEqual([...cfg.matchAll(/^ensure (\S+)$/gm)].map((m) => m[1]), ["oxmysql", "ox_lib", "qbx_core", "ox_inventory", "pma-voice"]);
 });

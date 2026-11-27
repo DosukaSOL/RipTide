@@ -67,11 +67,11 @@ RipTide Studio designs GTA V servers and exports their FiveM `server.cfg`. It do
 
 | Area | What it covers | Status | What happens today |
 | --- | --- | --- | --- |
-| Catalog | Frameworks, inventory, voice, phone, HUD, housing, jobs, interiors | Works today | Unreleased catalog entries are left out of builds. |
+| Catalog | Real, public FiveM resources: Qbox, QBCore, ESX Legacy, ox_lib, oxmysql, ox_inventory, pma-voice | Works today | Each entry gives the resource folder name, source and licence, and the dependencies in its own fxmanifest.lua. |
 | Compatibility | Duplicates, missing dependencies, conflicts, wrong-game mods, with one-click fixes | Works today |  |
-| Performance budget | Server time, player memory and download size | Works today | Estimates from catalog numbers, not measurements. |
+| Performance budget | Server time, player memory and download size | Planned | RipTide has no measured numbers for these resources, so it doesn't estimate them. |
 | Custom resources | Import your own scripts and assets | Planned |  |
-| Asset streaming | First-join download estimate, CDN for large downloads | Works today | The estimate works. The CDN isn't built. |
+| Asset streaming | First-join download size, CDN for large downloads | Planned |  |
 
 ## Look and feel
 
@@ -95,10 +95,10 @@ RipTide Studio designs GTA V servers and exports their FiveM `server.cfg`. It do
 | Area | What it covers | Status | What happens today |
 | --- | --- | --- | --- |
 | Download server.cfg | The FiveM config for your Blueprint | Works today | From the Deploy screen or riptide build --target fivem. |
-| Hosting | Deploy to a region with a cost estimate | Simulated | The Deploy screen checks and builds your Blueprint for real, then simulates the hosting steps. No server starts. |
-| Region pick | Ranked by where your Discord members are | Simulated | Uses example member locations. |
-| Self-hosting | docker-compose stack from the CLI | Experimental | An example file: the Riptide images it names aren't published, so it won't start as-is. |
-| Preview servers and deploy history | Branch, test with staff, merge, roll back | Planned | The Studio overview shows example data. |
+| Check and build | Validate the Blueprint and build server.cfg in one step | Works today | On the Deploy screen. You run the file on your own FiveM server. |
+| Hosting | Deploy to a region with a cost estimate | Planned | RipTide doesn't host servers, so it shows no prices or regions. |
+| Self-hosting | docker-compose stack | Planned | The server images it would need don't exist yet. |
+| Preview servers and deploy history | Branch, test with staff, merge, roll back | Planned |  |
 | Backups and restarts | Database backup schedule, scheduled restarts with countdown | Planned | You can set it in the Blueprint. Nothing applies it in-game yet: that needs a RipTide server runtime, which doesn't exist. |
 | Monitoring and DDoS protection | Tick time, crashes, alerts; protection with hosting | Planned |  |
 

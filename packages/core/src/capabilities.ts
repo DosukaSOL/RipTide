@@ -88,11 +88,11 @@ export const CAPABILITIES: { section: string; items: Capability[] }[] = [
   {
     section: "Mods and content",
     items: [
-      { area: "Catalog", what: "Frameworks, inventory, voice, phone, HUD, housing, jobs, interiors", status: "implemented", note: "Unreleased catalog entries are left out of builds." },
+      { area: "Catalog", what: "Real, public FiveM resources: Qbox, QBCore, ESX Legacy, ox_lib, oxmysql, ox_inventory, pma-voice", status: "implemented", note: "Each entry gives the resource folder name, source and licence, and the dependencies in its own fxmanifest.lua." },
       { area: "Compatibility", what: "Duplicates, missing dependencies, conflicts, wrong-game mods, with one-click fixes", status: "implemented" },
-      { area: "Performance budget", what: "Server time, player memory and download size", status: "implemented", note: "Estimates from catalog numbers, not measurements." },
+      { area: "Performance budget", what: "Server time, player memory and download size", status: "future", note: "RipTide has no measured numbers for these resources, so it doesn't estimate them." },
       { area: "Custom resources", what: "Import your own scripts and assets", status: "future" },
-      { area: "Asset streaming", what: "First-join download estimate, CDN for large downloads", status: "implemented", note: "The estimate works. The CDN isn't built." },
+      { area: "Asset streaming", what: "First-join download size, CDN for large downloads", status: "future" },
     ],
   },
   {
@@ -116,10 +116,10 @@ export const CAPABILITIES: { section: string; items: Capability[] }[] = [
     section: "Running it",
     items: [
       { area: "Download server.cfg", what: "The FiveM config for your Blueprint", status: "implemented", note: "From the Deploy screen or riptide build --target fivem." },
-      { area: "Hosting", what: "Deploy to a region with a cost estimate", status: "simulated", note: "The Deploy screen checks and builds your Blueprint for real, then simulates the hosting steps. No server starts." },
-      { area: "Region pick", what: "Ranked by where your Discord members are", status: "simulated", note: "Uses example member locations." },
-      { area: "Self-hosting", what: "docker-compose stack from the CLI", status: "experimental", note: "An example file: the Riptide images it names aren't published, so it won't start as-is." },
-      { area: "Preview servers and deploy history", what: "Branch, test with staff, merge, roll back", status: "future", note: "The Studio overview shows example data." },
+      { area: "Check and build", what: "Validate the Blueprint and build server.cfg in one step", status: "implemented", note: "On the Deploy screen. You run the file on your own FiveM server." },
+      { area: "Hosting", what: "Deploy to a region with a cost estimate", status: "future", note: "RipTide doesn't host servers, so it shows no prices or regions." },
+      { area: "Self-hosting", what: "docker-compose stack", status: "future", note: "The server images it would need don't exist yet." },
+      { area: "Preview servers and deploy history", what: "Branch, test with staff, merge, roll back", status: "future", },
       { area: "Backups and restarts", what: "Database backup schedule, scheduled restarts with countdown", status: "future", note: NOT_APPLIED },
       { area: "Monitoring and DDoS protection", what: "Tick time, crashes, alerts; protection with hosting", status: "future" },
     ],

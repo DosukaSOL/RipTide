@@ -12,8 +12,7 @@
     ],
     "language": "en",
     "maxPlayers": 128,
-    "region": "us-mia",
-    "discordGuild": "neon-coast"
+    "region": "us-mia"
   },
   "engine": {
     "target": "fivem",
@@ -208,6 +207,10 @@
       "enabled": true
     },
     {
+      "id": "ox-lib",
+      "enabled": true
+    },
+    {
       "id": "qbox",
       "enabled": true
     },
@@ -217,58 +220,6 @@
     },
     {
       "id": "pma-voice",
-      "enabled": true
-    },
-    {
-      "id": "lb-phone",
-      "enabled": true
-    },
-    {
-      "id": "riptide-hud",
-      "enabled": true
-    },
-    {
-      "id": "jg-garages",
-      "enabled": true
-    },
-    {
-      "id": "jobs-pack",
-      "enabled": true
-    },
-    {
-      "id": "police-mdt",
-      "enabled": true
-    },
-    {
-      "id": "ems-pack",
-      "enabled": true
-    },
-    {
-      "id": "beach-club-mlo",
-      "enabled": true
-    },
-    {
-      "id": "eup-pack",
-      "enabled": true
-    },
-    {
-      "id": "txadmin",
-      "enabled": true
-    },
-    {
-      "id": "riptide-guard",
-      "enabled": true
-    },
-    {
-      "id": "discord-bridge",
-      "enabled": true
-    },
-    {
-      "id": "graphics-neon",
-      "enabled": true
-    },
-    {
-      "id": "a11y-pack",
       "enabled": true
     }
   ],

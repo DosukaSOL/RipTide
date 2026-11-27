@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LuDownload, LuTriangleAlert } from "react-icons/lu";
-import { assessReadiness, bestRegion, estimateHosting, fivemAdapter, GTA6_CAPABILITIES, GTA6_CHECKED, REGIONS, deployPreflight } from "@riptide/core";
+import { assessReadiness, fivemAdapter, GTA6_CAPABILITIES, GTA6_CHECKED, deployPreflight } from "@riptide/core";
 import { useStore } from "../lib/store";
-import { MEMBER_SPREAD } from "../lib/sample";
-import { PageHead, money } from "../components/ui";
+import { PageHead } from "../components/ui";
 
-type Target = "fivem" | "gta6" | "docker";
+type Target = "fivem" | "gta6";
 
 export function Deploy() {
   const { bp, edit, toast } = useStore();
@@ -16,21 +15,10 @@ export function Deploy() {
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  const ranked = useMemo(() => bestRegion(MEMBER_SPREAD), []);
-  const hosting = useMemo(() => estimateHosting(bp), [bp]);
   const readiness = useMemo(() => assessReadiness(bp), [bp]);
-  const region = REGIONS.find((r) => r.id === bp.meta.region) ?? REGIONS[0]!;
 
-  // The first two steps really run, here in the app: the Blueprint is validated and the FiveM
-  // build is made. If either fails, the simulation stops there and says why. The hosting steps
-  // after that are only shown: nothing is reserved, started or posted.
-  const simulated = [
-    `Simulated: reserve ${hosting.vcpu} vCPU in ${region.city}`,
-    "Simulated: restore database snapshot",
-    "Simulated: start server",
-    "Simulated: post rules to Discord (nothing was posted)",
-  ];
-
+  // Both steps really run, here in the app: the Blueprint is validated and the FiveM build is
+  // made. Nothing is uploaded, reserved or started: RipTide doesn't host servers.
   const deploy = () => {
     if (state === "running") return;
     timers.current.forEach(clearTimeout);
@@ -39,7 +27,7 @@ export function Deploy() {
       setLog((l) => [...l, { t: "0.0s", m, bad: true }]);
       setProgress(0);
       setState("failed");
-      toast("The simulation stopped: fix the problems in the log first.");
+      toast("The build stopped: fix the problems in the log first.");
     };
     setLog([]);
     const pre = deployPreflight(bp);
@@ -52,7 +40,7 @@ export function Deploy() {
     setState("running");
     setProgress(4);
     const start = Date.now();
-    const steps = [...real, ...simulated.map((m) => ({ m, ok: false }))];
+    const steps = real;
     steps.forEach(({ m, ok }, i) => {
       timers.current.push(window.setTimeout(() => {
         const t = `${((Date.now() - start) / 1000).toFixed(1)}s`;
@@ -61,10 +49,10 @@ export function Deploy() {
       }, 450 + i * 520));
     });
     timers.current.push(window.setTimeout(() => {
-      setLog((l) => [...l, { t: `${((Date.now() - start) / 1000).toFixed(1)}s`, m: "Simulation complete. No server was started.", ok: true }]);
+      setLog((l) => [...l, { t: `${((Date.now() - start) / 1000).toFixed(1)}s`, m: "Ready: download server.cfg and run it on your own FiveM server.", ok: true }]);
       setProgress(100);
       setState("done");
-      toast("Simulation complete. No server was started.");
+      toast("Built. Download server.cfg to use it.");
     }, 450 + steps.length * 520));
   };
 
@@ -86,7 +74,7 @@ export function Deploy() {
 
   return (
     <>
-      <PageHead title="Deploy" sub="Riptide hosting isn't open yet. Download your server.cfg here, or run a simulation to see what a deploy will do." />
+      <PageHead title="Deploy" sub="Check your Blueprint and download the FiveM server.cfg it builds. RipTide doesn't host servers: you run the file on your own FiveM server." />
       <div className="grid g-main">
         <div className="grid">
           <section className="panel panel-pad">
@@ -107,11 +95,6 @@ export function Deploy() {
               <span><b>GTA VI</b><span>Out on consoles. Servers need a PC release and Rockstar's server tools, and neither is announced.</span></span>
               <span className="chip sun">Waiting</span>
             </button>
-            <button className="target" aria-pressed={target === "docker"} onClick={() => setTarget("docker")}>
-              <span className="tic" style={{ color: "var(--sky)", fontSize: 13 }}>Host</span>
-              <span><b>Your own machine</b><span>An example docker-compose file. The Riptide server images it names aren't published yet.</span></span>
-              <span className="chip dim">Example</span>
-            </button>
           </section>
 
           {target === "gta6" ? (
@@ -131,38 +114,11 @@ export function Deploy() {
                 ))}
               </div>
             </section>
-          ) : (
-            <section className="panel panel-pad">
-              <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
-                <h2>Region</h2>
-                <span className="muted small" style={{ marginLeft: "auto" }}>Ranked by distance to example member locations</span>
-              </div>
-              <div className="regions">
-                {ranked.map(({ region: r, avgKm }, i) => (
-                  <button className="region" key={r.id} aria-pressed={bp.meta.region === r.id} onClick={() => edit((d) => void (d.meta.region = r.id))}>
-                    <span className={`dot ${bp.meta.region === r.id ? "" : "off"}`} />
-                    <span>
-                      <div className="city">{r.city}</div>
-                      {i === 0 ? <div className="best">Closest to your community</div> : <div className="muted small">{r.label}</div>}
-                    </span>
-                    <span className="km">{avgKm.toLocaleString("en-US")} km</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
+          ) : null}
 
         </div>
 
         <aside className="grid">
-          <section className="panel panel-pad">
-            <h2 style={{ marginBottom: 4 }}>Rough monthly cost</h2>
-            <p className="muted small" style={{ margin: "0 0 10px" }}>An estimate from your slots and mods, not a price. Riptide hosting isn't open yet.</p>
-            {hosting.breakdown.map((b) => (
-              <div className="cost-line" key={b.label}><span>{b.label}</span><span className="num">{money(b.usd)}</span></div>
-            ))}
-            <div className="cost-total"><span className="muted">{region.city}</span><b className="num">${hosting.monthlyUsd.toFixed(2)}</b></div>
-          </section>
           <section className="panel panel-pad grid" style={{ gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span className="muted small">Launch readiness</span>
@@ -178,20 +134,18 @@ export function Deploy() {
             >
               <svg className="wave" viewBox="0 0 40 56" preserveAspectRatio="none" aria-hidden="true"><path d="M20 0 C 34 10 6 18 20 28 C 34 38 6 46 20 56 L 0 56 L 0 0 Z" fill="#ff4f9a" /></svg>
               <span className={state === "idle" && target === "fivem" ? "ink" : ""}>
-                {target === "gta6" ? "Not available yet" : target === "docker" ? "Use riptide build --target docker" : state === "running" ? `Simulating… ${progress}%` : state === "done" ? "Simulation complete" : "Run deployment simulation"}
+                {target === "gta6" ? "Not available yet" : state === "running" ? `Checking… ${progress}%` : state === "done" ? "Built" : "Check and build"}
               </span>
             </button>
-            <p id="rt-sim-note" className="muted small" style={{ margin: 0 }}>A simulation only. It doesn't start a server or post anything.</p>
+            <p id="rt-sim-note" className="muted small" style={{ margin: 0 }}>Runs here in RipTide. Nothing is uploaded or started.</p>
             <button className="btn" onClick={download}><LuDownload />Download server.cfg</button>
           </section>
             <section className="panel panel-pad">
             <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-              <h2>Simulation log</h2>
-              <span className="chip sun" style={{ marginLeft: "auto" }}>Not a real deploy</span>
+              <h2>Build log</h2>
             </div>
-            <p className="muted small" style={{ margin: "0 0 12px" }}>Riptide hosting isn't open yet, so no server is reserved or started.</p>
             <div className="log" aria-live="polite">
-              {!log.length && <span className="muted">Run the simulation to see each step a deploy of {bp.meta.name} will take.</span>}
+              {!log.length && <span className="muted">Check and build to see what goes into {bp.meta.name}'s server.cfg.</span>}
               {log.map((l, i) => (
                 <div key={i} className={l.bad ? "bad" : l.ok ? "ok" : ""}><span className="t">{l.t}</span>{l.bad ? "✕ " : l.ok ? "● " : "  "}{l.m}</div>
               ))}

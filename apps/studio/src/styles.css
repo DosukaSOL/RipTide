@@ -506,3 +506,8 @@ button { cursor: pointer; }
 .edition button[aria-pressed="true"] { border-color: var(--seafoam); background: rgba(61, 242, 208, .08); }
 .edition button:focus-visible { outline: 2px solid var(--seafoam); outline-offset: 2px; }
 @media (max-width: 640px) { .edition { margin-left: 0; grid-template-columns: 1fr; } }
+.cfg-list { margin: 0; padding-left: 22px; display: grid; gap: 4px; }
+.cfg-list code { font-family: var(--mono, monospace); font-size: 13px; color: var(--sand); }
+.mod-meta { margin-top: 4px; }
+.mod-meta code { color: var(--sand); }
+.mod-meta a { color: var(--sand); }

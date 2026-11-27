@@ -3,19 +3,16 @@ import { dirname, resolve, relative, isAbsolute } from "node:path";
 import {
   validateBlueprint,
   checkCompatibility,
-  estimateBudget,
   forecastEconomy,
   compileRulebook,
   renderRulesMarkdown,
   assessReadiness,
-  estimateHosting,
   shortCode,
   encodeBlueprint,
   decodeBlueprint,
   diffBlueprints,
   summarizeChange,
   ADAPTERS,
-  buildDockerStack,
   type Blueprint,
 } from "@riptide/core";
 import starterBlueprint from "../../../examples/neon-coast.riptide.json";
@@ -32,10 +29,10 @@ const HELP = `${pink("riptide")} ${dim("— design a server once, deploy it anyw
 
 ${bold("Usage")}
   riptide init [name]            Start a new Blueprint in this folder
-  riptide check [file]           Validate, check mods, budget and readiness
+  riptide check [file]           Validate, check mods and readiness
   riptide forecast [file]        Simulate 60 days of your economy
   riptide rules [file]           Show which rules Riptide can read
-  riptide build [file] [--target fivem|gta6|docker] [--out dir]
+  riptide build [file] [--target fivem|gta6] [--out dir]
   riptide share [file]           Print a share code
   riptide import <code> [file]   Turn a share code into a Blueprint
   riptide diff <a> <b>           Compare two Blueprints
@@ -109,12 +106,8 @@ switch (cmd) {
   case "check": {
     const bp = load(findBlueprint(args[0]));
     const compat = checkCompatibility(bp);
-    const budget = estimateBudget(bp);
     const ready = assessReadiness(bp);
     console.log(`\n${bold(bp.meta.name)} ${dim(`${bp.meta.maxPlayers} slots, ${bp.mods.filter((m) => m.enabled).length} mods, ${bp.engine.target}`)}\n`);
-    console.log(`  Server time  ${bar(budget.usage.serverMs)} ${budget.totals.serverMs} / ${budget.limits.serverMs} ms`);
-    console.log(`  Memory       ${bar(budget.usage.clientMB)} ${budget.totals.clientMB} / ${budget.limits.clientMB} MB`);
-    console.log(`  Download     ${bar(budget.usage.streamMB)} ${budget.totals.streamMB} MB, about ${budget.firstJoinSeconds}s on first join\n`);
     if (compat.issues.length) {
       compat.issues.forEach((i) => console.log(`  ${i.level === "error" ? pink("✗") : i.level === "warning" ? sun("!") : dim("i")} ${i.message}${i.fix ? dim(`  fix: ${i.fix.label}`) : ""}`));
       console.log();
@@ -148,13 +141,13 @@ switch (cmd) {
     break;
   }
   case "build": {
-    const target = (flag("target") ?? "fivem") as "fivem" | "gta6" | "docker";
+    const target = (flag("target") ?? "fivem") as "fivem" | "gta6";
     const outDir = resolve(flag("out") ?? "dist");
     const bp = load(findBlueprint(args[0]));
-    if (!["fivem", "gta6", "docker"].includes(target)) fail(`Unknown target "${target}". Use fivem, gta6 or docker.`);
+    if (!["fivem", "gta6"].includes(target)) fail(`Unknown target "${target}". Use fivem or gta6.`);
     let result;
     try {
-      result = target === "docker" ? buildDockerStack(bp) : ADAPTERS[target].build(bp);
+      result = ADAPTERS[target].build(bp);
     } catch (e) {
       fail((e as Error).message);
     }
@@ -169,10 +162,6 @@ switch (cmd) {
       console.log(`  ${sea("+")} ${relative(process.cwd(), p)}`);
     }
     result.notes.forEach((n) => console.log(`  ${sun("!")} ${n}`));
-    if (target !== "gta6") {
-      const h = estimateHosting(bp);
-      console.log(`\n  Suggested machine: ${h.vcpu} vCPU, ${h.ramGB} GB memory. Rough estimate: about $${h.monthlyUsd}/month (Riptide hosting isn't open yet).\n`);
-    }
     break;
   }
   case "share": {

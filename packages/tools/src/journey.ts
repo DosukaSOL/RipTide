@@ -124,7 +124,7 @@ export interface Suggestion {
   legM?: number;
 }
 
-export interface Plan {
+export interface SessionPlan {
   picks: Suggestion[];
   totalMin: number;
   /** Open goals that didn't fit in the time. */
@@ -140,7 +140,7 @@ const PRIORITY = { high: 3, normal: 2, low: 1 } as const;
  * shorten the straight-line path. Deterministic for the same input. Never adds a goal the player
  * didn't create, and gives the reason for each pick.
  */
-export function suggest(objectives: Objective[], opts: { profileId: string; budgetMin: number; focus?: GoalType[]; from?: Pt; fromLabel?: string; found?: ReadonlySet<string> }): Plan {
+export function suggest(objectives: Objective[], opts: { profileId: string; budgetMin: number; focus?: GoalType[]; from?: Pt; fromLabel?: string; found?: ReadonlySet<string> }): SessionPlan {
   const focus = new Set(opts.focus ?? []);
   const open = objectives.filter((o) => o.profileId === opts.profileId && o.status !== "done");
   const score = (o: Objective) => PRIORITY[o.priority] * 100 + (focus.has(o.type) ? 60 : 0) + (o.status === "in-progress" ? 40 : 0);

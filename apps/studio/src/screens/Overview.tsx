@@ -1,18 +1,19 @@
 import { useMemo } from "react";
-import { LuRocket, LuShare2, LuGitBranch, LuGitMerge } from "react-icons/lu";
-import { assessReadiness, estimateBudget, estimateHosting, encodeBlueprint, REGIONS } from "@riptide/core";
+import { LuRocket, LuShare2 } from "react-icons/lu";
+import { assessReadiness, checkCompatibility, compileRulebook, deployPreflight, encodeBlueprint } from "@riptide/core";
 import { useHref, useStore } from "../lib/store";
 import { Sunrise } from "../components/Sunrise";
-import { Check, Cross, money } from "../components/ui";
-import { DEPLOY_HISTORY, PREVIEWS } from "../lib/sample";
+import { Check, Cross } from "../components/ui";
 
 export function Overview() {
   const { bp, toast } = useStore();
   const href = useHref();
   const readiness = useMemo(() => assessReadiness(bp), [bp]);
-  const budget = useMemo(() => estimateBudget(bp), [bp]);
-  const hosting = useMemo(() => estimateHosting(bp), [bp]);
-  const region = REGIONS.find((r) => r.id === bp.meta.region);
+  const compat = useMemo(() => checkCompatibility(bp), [bp]);
+  const rules = useMemo(() => compileRulebook(bp.rulebook), [bp.rulebook]);
+  const build = useMemo(() => deployPreflight(bp), [bp]);
+  const started = build.ok ? [...build.serverCfg.matchAll(/^ensure (\S+)$/gm)].map((m) => m[1]!) : [];
+  const problems = compat.issues.filter((i) => i.level === "error").length;
   const enabled = bp.mods.filter((m) => m.enabled).length;
 
   const share = async () => {
@@ -31,8 +32,8 @@ export function Overview() {
       <section className="hero">
         <div>
           <div className="hero-row">
+            {bp.meta.slug === "neon-coast" && <span className="chip sun" title="RipTide's starter Blueprint. Rename it and change anything: it's yours.">Starter template</span>}
             <span className="chip sea"><span className="dot" />FiveM config export</span>
-            <span className="chip dim">{region?.city ?? bp.meta.region}</span>
             {bp.access.whitelist && <span className="chip dim">Whitelisted</span>}
           </div>
           <h1>{bp.meta.name}</h1>
@@ -58,14 +59,14 @@ export function Overview() {
           <div className="stat-s">{bp.roles.length} roles, {enabled} mods</div>
         </div>
         <div className="panel stat">
-          <div className="muted small">Hosting estimate</div>
-          <div className="stat-v">{money(hosting.monthlyUsd)}<span className="muted" style={{ fontSize: 15 }}> /month</span></div>
-          <div className="stat-s">{hosting.vcpu} vCPU, {hosting.ramGB} GB memory</div>
+          <div className="muted small">Mods</div>
+          <div className="stat-v">{started.length} start</div>
+          <div className="stat-s">{problems ? `${problems} problem${problems === 1 ? "" : "s"} to fix in Mods` : "No compatibility problems"}</div>
         </div>
         <div className="panel stat">
-          <div className="muted small">First join</div>
-          <div className="stat-v">{Math.round(budget.firstJoinSeconds / 6) / 10} min</div>
-          <div className="stat-s">{budget.totals.streamMB} MB download on 50 Mbit/s</div>
+          <div className="muted small">Rulebook</div>
+          <div className="stat-v">{rules.rules.length} rules</div>
+          <div className="stat-s">{rules.enforced} RipTide can read as settings</div>
         </div>
       </div>
 
@@ -88,42 +89,23 @@ export function Overview() {
           </ul>
         </section>
 
-        <div className="grid" style={{ alignContent: "start" }}>
-          <section className="panel">
-            <div className="panel-head">
-              <h2>Preview servers</h2>
-              <span className="chip dim" title="Preview servers arrive with RipTide hosting">Example data</span>
-              <span className="meta">Test changes before players see them</span>
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Your server.cfg</h2>
+            <span className="meta">Built from this Blueprint just now</span>
+          </div>
+          {build.ok ? (
+            <div style={{ padding: "4px 20px 16px" }}>
+              <p className="muted small" style={{ margin: "6px 0 10px" }}>These resources start, in this order. Download the file from Deploy.</p>
+              <ol className="cfg-list">
+                {started.map((r) => <li key={r}><code>{r}</code></li>)}
+              </ol>
+              {build.notes.length > 0 && <p className="muted small">{build.notes.length} note{build.notes.length === 1 ? "" : "s"} from the build. See Deploy.</p>}
             </div>
-            {PREVIEWS.map((p) => (
-              <div className="preview-row" key={p.branch}>
-                <LuGitBranch className="muted" />
-                <div style={{ flex: 1 }}>
-                  <div className="br">{p.branch}</div>
-                  <div className="muted small">{p.summary}</div>
-                </div>
-                <span className={`chip ${p.state === "live" ? "sea" : "dim"}`}>{p.state === "live" ? `${p.players} testing` : "Paused"}</span>
-                <button className="btn small" onClick={() => toast("Example only: merging arrives with Riptide hosting. Nothing was changed.")}><LuGitMerge />Merge</button>
-              </div>
-            ))}
-          </section>
-
-          <section className="panel">
-            <div className="panel-head"><h2>Deploy history</h2><span className="chip dim" title="Deploy history arrives with RipTide hosting">Example data</span><span className="meta">Roll back to any point</span></div>
-            <ul className="timeline">
-              {DEPLOY_HISTORY.map((d, i) => (
-                <li key={d.id}>
-                  <span className={`tdot ${i === 0 ? "live" : ""}`} />
-                  <div>
-                    <div className="what">{d.title}</div>
-                    <div className="sub">{d.detail}</div>
-                  </div>
-                  <span className="when">{d.when}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
+          ) : (
+            <p className="muted" style={{ padding: "4px 20px 16px" }}>{build.message}</p>
+          )}
+        </section>
       </div>
     </>
   );

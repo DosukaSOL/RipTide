@@ -93,8 +93,8 @@ export function World() {
               {PRESETS.map((p) => (
                 <button key={p.id} className="preset" aria-pressed={v.preset === p.id} onClick={() => edit((d) => {
                   d.visuals.preset = p.id;
+                  // A saved choice only: there's no RipTide graphics resource to install.
                   d.mods = d.mods.filter((m) => !PRESETS.some((x) => x.id === m.id));
-                  d.mods.push({ id: p.id, enabled: true });
                 })}>
                   <div className="sw" style={{ background: `linear-gradient(180deg, ${p.sky.join(",")})` }} />
                   <b>{p.name}</b>

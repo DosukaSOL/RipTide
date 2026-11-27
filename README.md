@@ -85,7 +85,7 @@ Running a good server today means juggling a dozen config files, a Discord bot, 
 You describe your server once as a **Blueprint**: rules, roles, economy, mods, visuals, who can join. RipTide checks that it all fits together, shows you what will happen before players arrive, and builds it for your server. No scripting needed, and nothing hidden if you do know how.
 
 <p align="center">
-  <img src="docs/screenshots/overview.png" alt="RipTide Studio overview: server summary, launch readiness shown as a rising sun, checklist, and example preview servers and deploy history" width="100%">
+  <img src="docs/screenshots/overview.png" alt="RipTide Studio overview: server summary, launch readiness shown as a rising sun, checklist, and the server.cfg it builds" width="100%">
 </p>
 
 ### What Studio does differently
@@ -97,12 +97,10 @@ Most of these already work in the preview. Each row says when something isn't bu
 | **Economy forecast** | Simulates 60 days of your players' wallets before launch, so you see inflation and broke newcomers coming. Inside the forecast, autopilot can nudge taxes to keep things steady. |
 | **Plain-English rulebook** | Write *"Police need at least 4 officers online before bank robberies."* RipTide reads the rules it understands into machine-readable form, leaves the rest to staff, and produces one rules page plus a Discord post preview that never drift apart. RipTide doesn't post to Discord yet, and in-game enforcement needs a RipTide server runtime, which doesn't ship yet. |
 | **Mod compatibility check** | Spots duplicate systems, missing dependencies and wrong-game mods *before* you install, with one-click fixes and a worked-out start order. |
-| **Performance budget** | Server time, player memory and first-join download size, estimated for your player count while you browse mods. |
 | **Launch readiness** | A single score, drawn as a sun rising over the water. At 100 it clears the horizon. |
 | **Preview servers** | Branch your server, let staff test a change, then merge it. Coming with RipTide hosting. |
 | **Share codes** | Turn a whole server into a code that others can remix, with `riptide share` and `riptide import` in the CLI. |
 | **Engine-agnostic Blueprints** | The same Blueprint exports FiveM config today and is designed to move to GTA VI later. Only the adapter changes. |
-| **Region by community** | Ranks hosting regions by distance to where your members are. It uses example locations for now: RipTide hosting and Discord sign-in aren't built yet. |
 
 <table>
   <tr>
@@ -110,12 +108,12 @@ Most of these already work in the preview. Each row says when something isn't bu
     <td width="50%"><img src="docs/screenshots/rulebook.png" alt="Rulebook editor with plain-English rules sorted into parsed rules and staff rules"><br><sub><b>Rulebook.</b> Write it in English, see what RipTide can read.</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/mods.png" alt="Mods screen flagging a framework conflict with a one-click fix and a performance budget"><br><sub><b>Mods.</b> Conflicts caught before install, with a fix.</sub></td>
+    <td><img src="docs/screenshots/mods.png" alt="Mods screen with real FiveM resources, their folder names, sources and licences, and a one-click fix for a conflict"><br><sub><b>Mods.</b> Real resources, with conflicts caught and fixed.</sub></td>
     <td><img src="docs/screenshots/roles.png" alt="Roles permission matrix showing inherited permissions"><br><sub><b>Roles.</b> Who can do what, inheritance at a glance.</sub></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/world.png" alt="World and look screen with a live neon city preview"><br><sub><b>World & look.</b> Time, weather, streets and a live visual preview.</sub></td>
-    <td><img src="docs/screenshots/deploy.png" alt="Deploy screen with game targets, regions ranked by community, cost and a simulated deploy"><br><sub><b>Deploy.</b> Pick a game and region. Hosted deploys are simulated until hosting opens.</sub></td>
+    <td><img src="docs/screenshots/deploy.png" alt="Deploy screen with game targets, the FiveM edition, and a check-and-build log"><br><sub><b>Deploy.</b> Check your Blueprint and download server.cfg.</sub></td>
   </tr>
 </table>
 
@@ -160,16 +158,14 @@ flowchart LR
   S --> B((Blueprint))
   C[riptide CLI] --> B
   B --> K{Checks}
-  K -->|compatibility, budget,<br>economy, readiness| B
+  K -->|compatibility,<br>economy, readiness| B
   B --> F[FiveM adapter]
   B --> G[GTA VI adapter]
-  B --> D[Docker stack]
   G -. waiting on Rockstar .-> V[GTA VI servers]
   F --> H[Your server]
-  D --> H
 ```
 
-- **`packages/core`**: the Studio engine. Blueprint schema, catalog, compatibility, budget, economy simulation, rulebook compiler, readiness, hosting estimates, share codes, diffs and adapters. No UI, fully tested.
+- **`packages/core`**: the Studio engine. Blueprint schema, catalog of real resources, compatibility, economy simulation, rulebook compiler, readiness, share codes, diffs and adapters. No UI, fully tested.
 - **`packages/tools`**: logic for the other tools: frame-time parsing and stats, heist plans, map places and packs, window layout recovery, validated storage. Fully tested.
 - **`packages/cli`**: `riptide` on the command line, for people who like files and git.
 - **`apps/studio`**: the app itself, with RipTide Tools and Studio.
@@ -180,10 +176,10 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Roadmap
 
-- [x] Blueprint format, compatibility check, performance budget
+- [x] Blueprint format, compatibility check against real FiveM resources
 - [x] Economy forecast with autopilot
 - [x] Plain-English rulebook with a rules page and a Discord post preview
-- [x] FiveM `server.cfg` export (mods, roles, settings) and an example docker stack
+- [x] FiveM `server.cfg` export (mods, roles, settings), for GTA V Legacy or Enhanced
 - [ ] RipTide server runtime: applying world, economy and rules in-game
 - [x] Studio design and startup animation
 - [x] RipTide Tools preview: ViceLab, Heist Ops, Interactive Map, Workspaces

@@ -969,23 +969,23 @@ await check("browser: settings explain where data is kept", async () => {
   await ctx.close();
 });
 
-console.log("\nDeploy simulation");
-await check("deploy simulation runs the real check and build and reports mods left out", async () => {
+console.log("\nCheck and build");
+await check("check and build runs the real check and build and reports mods left out", async () => {
   const { ctx, page, errors } = await fresh();
   await page.goto(`${base}/?splash=0#/mods`);
   await page.getByRole("button", { name: "Remove oxmysql" }).click();
   await page.click('a[data-id="deploy"]');
-  await page.getByRole("button", { name: "Run deployment simulation" }).click();
+  await page.getByRole("button", { name: "Check and build" }).click();
   const log = page.locator(".log");
   await log.getByText("Checked Blueprint: no problems").waitFor();
-  await log.getByText(/Built server\.cfg: 14 of 16 enabled mods start \(2 left out, see Mods\)/).waitFor();
-  await log.getByText("Simulation complete. No server was started.").waitFor({ timeout: 8000 });
+  await log.getByText(/Built server\.cfg: 2 of 4 enabled mods start \(2 left out, see Mods\)/).waitFor();
+  await log.getByText("Ready: download server.cfg and run it on your own FiveM server.").waitFor({ timeout: 8000 });
   // What the screen reported matches the file it downloads.
   const dl = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download server.cfg" }).click();
   const file = await (await dl).path();
   const cfg = await readFile(file, "utf8");
-  assert.equal((cfg.match(/^ensure /gm) ?? []).length, 14);
+  assert.deepEqual([...cfg.matchAll(/^ensure (\S+)$/gm)].map((m) => m[1]), ["ox_lib", "pma-voice"]);
   assert.doesNotMatch(cfg, /^ensure oxmysql$/m);
   assert.deepEqual(errors, []);
   await ctx.close();
@@ -1005,7 +1005,7 @@ await check("FiveM for GTA V Enhanced: no build pin, graphic mods left out, and 
   assert.doesNotMatch(cfg, /^sv_enforceGameBuild/m);
   assert.match(cfg, /^set sv_syncTickRate 60$/m);
   assert.doesNotMatch(cfg, /^ensure graphics-/m, "graphic mods can't run on Enhanced in early access");
-  await page.getByRole("button", { name: "Run deployment simulation" }).click();
+  await page.getByRole("button", { name: "Check and build" }).click();
   await page.locator(".log").getByText(/notes? from the build/).waitFor();
   await page.getByRole("group", { name: "FiveM edition" }).getByRole("button", { name: /GTA V Legacy/ }).click();
   assert.match(await cfgNow(), /^sv_enforceGameBuild \d+$/m);

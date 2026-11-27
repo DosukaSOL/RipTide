@@ -2,6 +2,7 @@ import type { Blueprint } from "../blueprint";
 import { effectivePermissions, roleCycles } from "../blueprint";
 import { checkCompatibility } from "../compatibility";
 import { compileRulebook } from "../rules/rulebook";
+import { CATALOG_BY_ID } from "../catalog";
 import type { Adapter, AdapterCapability, BuildResult } from "./types";
 
 /**
@@ -89,7 +90,7 @@ export const fivemAdapter: Adapter = {
       `# They're saved in riptide/blueprint-config.json for reference; the server doesn't load it.`,
       ``,
       `# Mods, in dependency order`,
-      ...order.map((id) => `ensure ${token(id)}`),
+      ...order.map((id) => `ensure ${token(CATALOG_BY_ID.get(id)?.resource ?? id)}`),
       ``,
       `# Roles`,
       ...ace,
