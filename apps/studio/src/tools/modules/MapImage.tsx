@@ -6,6 +6,8 @@ import { useMapData } from "../mapdata";
 import { useToolsData } from "../data";
 
 const ZOOMS = [1, 2, 4];
+/** Rockstar's launch post, which points to the official printable map of Leonida. */
+const ROCKSTAR_MAP = "https://www.rockstargames.com/newswire/article/39akk424a9oo53/grand-theft-auto-vi-now-available";
 
 /** Settings panel: pick your own map image, line it up with known places, or remove it. */
 export function MapImagePanel() {
@@ -75,7 +77,10 @@ export function MapImagePanel() {
       <div className="rt-setting" style={{ borderBottom: 0 }}>
         <div className="rt-setting-text">
           Your own map image
-          <small>Use a map image you have on this device. It stays here: it's never uploaded, and it isn't part of backups.</small>
+          <small>
+            Use a map image you have on this device. It stays here: it's never uploaded, and it isn't part of backups. Rockstar offers a printable map of Leonida on the{" "}
+            <a href={ROCKSTAR_MAP} target="_blank" rel="noopener noreferrer">official Grand Theft Auto VI site</a>.
+          </small>
         </div>
         <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ""; }} />
         <button className="rt-btn rt-sm" disabled={busy} onClick={() => input.current?.click()}><LuUpload />{meta ? "Replace" : "Choose image"}</button>

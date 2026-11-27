@@ -10,7 +10,7 @@ export * from "./share";
 export * from "./diff";
 export * from "./adapters/types";
 export { fivemAdapter, FIVEM_CAPABILITIES } from "./adapters/fivem";
-export { gta6Adapter, GTA6_CAPABILITIES } from "./adapters/gta6";
+export { gta6Adapter, GTA6_CAPABILITIES, GTA6_CHECKED } from "./adapters/gta6";
 export { buildDockerStack } from "./adapters/docker";
 
 import { fivemAdapter } from "./adapters/fivem";

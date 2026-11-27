@@ -50,7 +50,7 @@ RipTide is one app for your whole GTA setup. Its tools live side by side, stay r
 | **Today** | Say how long you've got and get a short list from goals you set yourself, with the reason for each pick, a session checklist, a summary at the end and routes between places. Distances are straight lines; RipTide never reads the game or ticks anything off for you. |
 | **Journal** | Notes and milestones with tags and places, next to everything you finished in Today, in one searchable timeline. Deleted notes can be restored for 30 days. |
 | **Garage** | The vehicles you own or want, properties with their spaces, and savings goals, with your own prices. "Hunt in Today" turns a wanted car into a goal. |
-| **Interactive Map** | The official map of Leonida with 884 places to find in nine categories, your own map image, or RipTide's schematic grid. Also works as a plain list. Search, region filters, found tracking across up to eight playthroughs, favourites, your own markers, Add to Today, routes and a second-screen pop-out. |
+| **Interactive Map** | The official map of Leonida with 1,028 places to find in nine categories, your own map image, or RipTide's schematic grid. Also works as a plain list. Search, region filters, found tracking across up to eight playthroughs, favourites, your own markers, Add to Today, routes and a second-screen pop-out. |
 | **ViceLab** | Real frame times from PresentMon, CapFrameX, MangoHud, OCAT and FrameView: average FPS, 1% and 0.1% lows, stability. Screenshot compare and settings picked from your own runs. |
 | **Heist Ops** | Plan the job with your crew: roles, phases, checklists and shared notes. Share a plan as a file. |
 | **RipTide Studio** | Design a roleplay or community server without code, check it fits together, and export its FiveM `server.cfg`. More below. |
@@ -127,6 +127,7 @@ Frameworks, inventories, voice, phones, HUDs, housing, garages, jobs, police and
 
 - **In your browser or on your phone:** [open RipTide Tools](https://dosukasol.github.io/RipTide/app/?shell=tools). Nothing to install, everything stays on your device, and you can add it to your home screen to use it offline.
 - **Desktop app:** [download it](https://github.com/DosukaSOL/RipTide/releases/latest) for Windows, macOS or Linux. Your data is saved as files in `Documents/RipTide`, it works offline, it never gets cleared with your browser data, and it updates itself with one click when a new version is out. The builds aren't code-signed yet, so the first launch shows a warning: on Windows click **More info → Run anyway**, on macOS right-click the app and choose **Open**.
+- **Stay safe:** RipTide doesn't contain or run GTA VI. There's no PC version of GTA VI yet, and "GTA 6 PC downloads" are fake and often steal accounts. Only download RipTide from its [GitHub releases](https://github.com/DosukaSOL/RipTide/releases), where every file is listed in `SHA256SUMS.txt`.
 
 To run it yourself, you'll need Node 20 or newer.
 

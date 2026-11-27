@@ -332,7 +332,7 @@ await check("map as a list: same places, select one, back to the map", async () 
   const rows = page.locator(".rt-map-listrow");
   await rows.first().waitFor();
   assert.equal(await rows.count(), 400);
-  await page.getByText(/Showing the first 400 of 884/).waitFor();
+  await page.getByText(`Showing the first 400 of ${placesJson.places.length}.`, { exact: false }).waitFor();
   await page.fill("#rt-map-q", "Y Vice City");
   await page.waitForFunction(() => document.querySelectorAll(".rt-map-listrow").length < 400);
   await page.fill("#rt-map-q", "");
@@ -987,6 +987,28 @@ await check("deploy simulation runs the real check and build and reports mods le
   const cfg = await readFile(file, "utf8");
   assert.equal((cfg.match(/^ensure /gm) ?? []).length, 14);
   assert.doesNotMatch(cfg, /^ensure oxmysql$/m);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+await check("FiveM for GTA V Enhanced: no build pin, graphic mods left out, and back to Legacy", async () => {
+  const { ctx, page, errors } = await fresh();
+  await page.goto(`${base}/?splash=0#/deploy`);
+  const cfgNow = async () => {
+    const dl = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download server.cfg" }).click();
+    return readFile(await (await dl).path(), "utf8");
+  };
+  assert.match(await cfgNow(), /^sv_enforceGameBuild \d+$/m);
+  await page.getByRole("group", { name: "FiveM edition" }).getByRole("button", { name: /GTA V Enhanced/ }).click();
+  const cfg = await cfgNow();
+  assert.doesNotMatch(cfg, /^sv_enforceGameBuild/m);
+  assert.match(cfg, /^set sv_syncTickRate 60$/m);
+  assert.doesNotMatch(cfg, /^ensure graphics-/m, "graphic mods can't run on Enhanced in early access");
+  await page.getByRole("button", { name: "Run deployment simulation" }).click();
+  await page.locator(".log").getByText(/notes? from the build/).waitFor();
+  await page.getByRole("group", { name: "FiveM edition" }).getByRole("button", { name: /GTA V Legacy/ }).click();
+  assert.match(await cfgNow(), /^sv_enforceGameBuild \d+$/m);
   assert.deepEqual(errors, []);
   await ctx.close();
 });

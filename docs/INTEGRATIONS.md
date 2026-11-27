@@ -19,7 +19,8 @@ RipTide Studio designs GTA V servers and exports their FiveM `server.cfg`. It do
 | --- | --- | --- | --- |
 | Identity | Name, tagline, tags, language | Exported to server.cfg | Server icon and loading screen aren't exported. |
 | Slots | Max players | Exported to server.cfg | Reserved slots and queue priority are saved in the Blueprint but not applied. |
-| Game build | Pin a game build | Exported to server.cfg | Scheduled auto-updates aren't built. |
+| Game build | Pin a game build | Exported to server.cfg | Scheduled auto-updates aren't built. FiveM for GTA V Enhanced always uses the latest build. |
+| FiveM edition | GTA V Legacy, or FiveM for GTA V Enhanced (early access) | Exported to server.cfg | For Enhanced, server.cfg skips the build pin, and RipTide flags graphic mods and Mumble voice and lists what changes (escrow, Cfx Server, .NET). |
 | Framework | Qbox, QBCore or ESX Legacy from the catalog | Exported to server.cfg | A framework generated from your Blueprint (Riptide Core) isn't built. |
 | Start order | Worked out from what each mod needs | Exported to server.cfg |  |
 | Database | Managed database, restore points, preview branches | Planned |  |

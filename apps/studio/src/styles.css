@@ -497,3 +497,12 @@ button { cursor: pointer; }
 @keyframes splash-line { to { transform: scaleX(1); } }
 .splash.leave { opacity: 0; visibility: hidden; }
 .splash.leave .splash-logo { transform: translateY(-10px) scale(1.03); filter: blur(4px); }
+
+/* FiveM edition (Deploy) */
+.edition { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 0 58px; }
+.edition + .target { margin-top: 10px; }
+.edition button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--sand); text-align: left; cursor: pointer; font: inherit; }
+.edition button span { color: var(--muted, #a69dc9); font-size: 12.5px; }
+.edition button[aria-pressed="true"] { border-color: var(--seafoam); background: rgba(61, 242, 208, .08); }
+.edition button:focus-visible { outline: 2px solid var(--seafoam); outline-offset: 2px; }
+@media (max-width: 640px) { .edition { margin-left: 0; grid-template-columns: 1fr; } }

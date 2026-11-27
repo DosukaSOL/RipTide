@@ -198,7 +198,7 @@ function Main() {
             </nav>
             <div className="rt-side-foot">
               <p><span className="rt-dot" style={{ marginRight: 8 }} />RipTide Studio · FiveM config export</p>
-              <p><span className="rt-dot rt-sun" style={{ marginRight: 8 }} />GTA VI integrations · awaiting PC support</p>
+              <p><span className="rt-dot rt-sun" style={{ marginRight: 8 }} />GTA VI out on consoles · PC not announced</p>
               <p className="rt-legal">Independent companion software. Not affiliated with Rockstar Games or Take-Two Interactive.</p>
             </div>
           </aside>

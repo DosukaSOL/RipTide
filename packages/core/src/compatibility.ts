@@ -5,7 +5,7 @@ export type IssueLevel = "error" | "warning" | "info";
 
 export interface CompatIssue {
   level: IssueLevel;
-  code: "unknown" | "engine" | "missing" | "exclusive" | "conflict" | "cycle" | "planned";
+  code: "unknown" | "engine" | "missing" | "exclusive" | "conflict" | "cycle" | "planned" | "enhanced-voice";
   mods: string[];
   message: string;
   /** A one-click fix the Studio can apply. */
@@ -41,6 +41,13 @@ export function checkCompatibility(bp: Pick<Blueprint, "mods" | "engine">, catal
     if (!item.engines.includes(engine)) {
       issues.push({ level: "error", code: "engine", mods: [item.id], message: `${item.name} doesn't run on ${engine === "gta6" ? "GTA VI" : "FiveM"} yet.`, fix: { label: "Remove", remove: [item.id] } });
       continue;
+    }
+    if (engine === "fivem" && bp.engine.edition === "enhanced") {
+      if (item.category === "visuals") {
+        issues.push({ level: "error", code: "engine", mods: [item.id], message: `${item.name} is a graphics mod, and graphic mods can't be used on FiveM for GTA V Enhanced during early access.`, fix: { label: "Remove", remove: [item.id] } });
+        continue;
+      }
+      if (/mumble/i.test(item.summary)) issues.push({ level: "warning", code: "enhanced-voice", mods: [item.id], message: `${item.name} uses Mumble, which is deprecated on FiveM for GTA V Enhanced. Check it supports Enhanced before you launch.` });
     }
     if (item.status === "planned") {
       // Not released, so there's nothing to install or start. Keep it out of the build.

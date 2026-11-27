@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LuDownload, LuTriangleAlert } from "react-icons/lu";
-import { assessReadiness, bestRegion, estimateHosting, fivemAdapter, GTA6_CAPABILITIES, REGIONS, deployPreflight } from "@riptide/core";
+import { assessReadiness, bestRegion, estimateHosting, fivemAdapter, GTA6_CAPABILITIES, GTA6_CHECKED, REGIONS, deployPreflight } from "@riptide/core";
 import { useStore } from "../lib/store";
 import { MEMBER_SPREAD } from "../lib/sample";
 import { PageHead, money } from "../components/ui";
@@ -96,9 +96,15 @@ export function Deploy() {
               <span><b>GTA V on FiveM</b><span>Exports server.cfg with your mods, roles and settings. World, economy and rules aren't applied in-game yet.</span></span>
               <span className="chip sea">Config export</span>
             </button>
+            {target === "fivem" && (
+              <div className="edition" role="group" aria-label="FiveM edition">
+                <button aria-pressed={bp.engine.edition !== "enhanced"} onClick={() => edit((d) => void (d.engine.edition = "legacy"))}><b>GTA V Legacy</b><span>What most servers run</span></button>
+                <button aria-pressed={bp.engine.edition === "enhanced"} onClick={() => edit((d) => void (d.engine.edition = "enhanced"))}><b>GTA V Enhanced</b><span>Early access, Cfx Server</span></button>
+              </div>
+            )}
             <button className="target" aria-pressed={target === "gta6"} onClick={() => setTarget("gta6")}>
               <span className="tic" style={{ color: "var(--flamingo)" }}>VI</span>
-              <span><b>GTA VI</b><span>Waiting for the PC release and Rockstar's server tools.</span></span>
+              <span><b>GTA VI</b><span>Out on consoles. Servers need a PC release and Rockstar's server tools, and neither is announced.</span></span>
               <span className="chip sun">Waiting</span>
             </button>
             <button className="target" aria-pressed={target === "docker"} onClick={() => setTarget("docker")}>
@@ -110,17 +116,17 @@ export function Deploy() {
 
           {target === "gta6" ? (
             <section className="panel">
-              <div className="panel-head"><h2>What we know about GTA VI</h2><span className="meta">Updated as Rockstar shares more</span></div>
+              <div className="panel-head"><h2>What we know about GTA VI</h2><span className="meta">Checked {new Date(GTA6_CHECKED).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}</span></div>
               <div className="panel-pad grid" style={{ gap: 12 }}>
                 <div className="notice">
                   <LuTriangleAlert />
-                  <div><b>GTA VI servers can't be deployed yet.</b> Keep building here. Your Blueprint is engine-agnostic and Riptide will move it over on day one.</div>
+                  <div><b>GTA VI servers can't be deployed.</b> Keep building here: your Blueprint isn't tied to one game, so it's ready to move if Rockstar releases official server tools.</div>
                 </div>
                 {GTA6_CAPABILITIES.map((c) => (
                   <div className="cost-line" key={c.feature} style={{ alignItems: "center", gap: 16 }}>
                     <span style={{ minWidth: 170, color: "var(--sand)" }}>{c.feature}</span>
                     <span className="muted" style={{ flex: 1 }}>{c.note}</span>
-                    <span className={`chip ${c.status === "confirmed" ? "sea" : c.status === "expected" ? "sun" : "dim"}`}>{c.status}</span>
+                    <span className={`chip ${c.status === "confirmed" ? "sea" : c.status === "reported" ? "sun" : "dim"}`}>{c.status === "reported" ? "reported, unconfirmed" : c.status === "unknown" ? "not announced" : "confirmed"}</span>
                   </div>
                 ))}
               </div>

@@ -66,7 +66,7 @@ const SCENES = [
       { t: bar(9) - bar(4), r: R("map-place", "actions") },
     ],
     cap: [
-      { t: 0.15, title: "The official map of Leonida", sub: "884 places to find: landmarks, shops, safehouses, garages and more" },
+      { t: 0.15, title: "The official map of Leonida", sub: "1,028 places to find: landmarks, shops, safehouses, garages and more" },
       { t: bar(5) - bar(4), title: "Track what you've found", sub: "Hide found, jump to the next one, up to eight playthroughs" },
       { t: bar(6) - bar(4), title: "Find anything fast", sub: "Search places, areas and shops" },
       { t: bar(7) - bar(4), title: "Right down to street level", sub: "Every marker sits on the building it belongs to" },

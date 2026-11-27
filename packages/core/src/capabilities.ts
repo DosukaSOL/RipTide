@@ -40,7 +40,8 @@ export const CAPABILITIES: { section: string; items: Capability[] }[] = [
     items: [
       { area: "Identity", what: "Name, tagline, tags, language", status: "config-only", note: "Server icon and loading screen aren't exported." },
       { area: "Slots", what: "Max players", status: "config-only", note: "Reserved slots and queue priority are saved in the Blueprint but not applied." },
-      { area: "Game build", what: "Pin a game build", status: "config-only", note: "Scheduled auto-updates aren't built." },
+      { area: "Game build", what: "Pin a game build", status: "config-only", note: "Scheduled auto-updates aren't built. FiveM for GTA V Enhanced always uses the latest build." },
+      { area: "FiveM edition", what: "GTA V Legacy, or FiveM for GTA V Enhanced (early access)", status: "config-only", note: "For Enhanced, server.cfg skips the build pin, and RipTide flags graphic mods and Mumble voice and lists what changes (escrow, Cfx Server, .NET)." },
       { area: "Framework", what: "Qbox, QBCore or ESX Legacy from the catalog", status: "config-only", note: "A framework generated from your Blueprint (Riptide Core) isn't built." },
       { area: "Start order", what: "Worked out from what each mod needs", status: "config-only" },
       { area: "Database", what: "Managed database, restore points, preview branches", status: "future" },

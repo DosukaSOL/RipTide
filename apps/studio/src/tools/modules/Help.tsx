@@ -84,7 +84,7 @@ function About() {
     <section className="rt-panel rt-pad" aria-labelledby="rt-about" style={{ marginTop: 24 }}>
       <h2 id="rt-about">About and credits</h2>
       <p className="rt-notice" style={{ margin: "10px 0 16px" }}>
-        RipTide is independent software. It isn't affiliated with, endorsed by or sponsored by Rockstar Games or Take-Two Interactive. "Official" in RipTide only says where something comes from, not that Rockstar approved RipTide.
+        RipTide is independent software. It isn't affiliated with, endorsed by or sponsored by Rockstar Games or Take-Two Interactive. "Official" in RipTide only says where something comes from, not that Rockstar approved RipTide. RipTide doesn't include, unlock or run GTA VI, and it won't work with leaked builds or unofficial PC ports.
       </p>
       <dl className="rt-credits">
         <dt>Map background</dt>

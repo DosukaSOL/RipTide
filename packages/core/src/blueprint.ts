@@ -139,7 +139,12 @@ export const Blueprint = z.object({
     region: z.string(),
     discordGuild: z.string().optional(),
   }),
-  engine: z.object({ target: EngineTarget, build: z.string().regex(/^\d{1,6}$/).optional() }),
+  engine: z.object({
+    target: EngineTarget,
+    build: z.string().regex(/^\d{1,6}$/).optional(),
+    /** Which FiveM: on GTA V Legacy (most servers), or FiveM for GTA V Enhanced (early access since July 2026). */
+    edition: z.enum(["legacy", "enhanced"]).default("legacy"),
+  }),
   world: World,
   economy: Economy,
   roles: z.array(Role).min(1),

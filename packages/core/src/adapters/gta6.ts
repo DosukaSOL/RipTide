@@ -11,23 +11,27 @@ import type { Adapter, BuildResult } from "./types";
  * to learn how to speak it.
  *
  * Until then it produces a portable bundle (the Blueprint plus compiled
- * rules) and a capability report, so servers can be designed today and
- * migrated on day one.
+ * rules) and a report of what's known. RipTide never builds against leaked
+ * builds, unofficial PC ports or unannounced interfaces.
  */
 
 export interface Gta6Capability {
   feature: string;
-  status: "unknown" | "expected" | "confirmed";
+  /** confirmed: Rockstar said so. reported: press reports, not confirmed. unknown: nothing announced. */
+  status: "unknown" | "reported" | "confirmed";
   note: string;
 }
 
+/** When the facts below were last checked against Rockstar's and Cfx.re's own announcements. */
+export const GTA6_CHECKED = "2026-11-27";
+
 export const GTA6_CAPABILITIES: Gta6Capability[] = [
-  { feature: "PC release", status: "expected", note: "Reported for early 2027. Not confirmed by Rockstar." },
-  { feature: "GTA VI Online", status: "expected", note: "No official date. Industry comments point to 2027." },
-  { feature: "Community servers", status: "unknown", note: "Rockstar owns Cfx.re (FiveM). An official path is likely but unannounced." },
-  { feature: "Server-side scripting", status: "unknown", note: "Riptide Core will target whatever scripting runtime ships." },
-  { feature: "Custom assets and streaming", status: "unknown", note: "Mods marked GTA VI in the catalog are designed to port." },
-  { feature: "Visual presets", status: "expected", note: "Riptide visual presets are described as parameters, not engine files." },
+  { feature: "Consoles", status: "confirmed", note: "Out on PlayStation 5 and Xbox Series X|S since 19 November 2026." },
+  { feature: "PC release", status: "reported", note: "Not announced by Rockstar. Press reports point to early 2027." },
+  { feature: "GTA VI Online", status: "reported", note: "Not announced. Press reports point to 2027." },
+  { feature: "Community servers", status: "unknown", note: "Nothing announced by Rockstar or Cfx.re (the FiveM team Rockstar owns), and no server software exists." },
+  { feature: "Mods and scripting", status: "unknown", note: "No official mod support or scripting tools announced." },
+  { feature: "Unofficial PC ports", status: "unknown", note: "Built from leaked files. RipTide won't support them, and Rockstar is acting against them." },
 ];
 
 export const gta6Adapter: Adapter = {
@@ -38,7 +42,7 @@ export const gta6Adapter: Adapter = {
     return {
       target: "gta6",
       notes: [
-        "GTA VI servers can't be deployed yet. Riptide saved a portable bundle you can deploy the day support lands.",
+        "GTA VI servers can't be deployed: Rockstar hasn't released a PC version or server tools. Riptide saved your Blueprint as a portable bundle.",
       ],
       files: [
         { path: "bundle/blueprint.json", contents: JSON.stringify(bp, null, 2) },

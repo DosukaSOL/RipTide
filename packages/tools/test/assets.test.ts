@@ -60,3 +60,12 @@ test("every asset says who made it, where it's from and how it's credited", () =
     for (const k of ["license", "credit", "owner", "source"] as const) assert.ok(a[k]?.trim(), `${a.id} needs ${k}`);
   }
 });
+
+test("the place count on the website and in the README matches the bundled place data", () => {
+  const places = JSON.parse(readFileSync(join(ROOT, "apps/studio/assets/map/leonida/places.json"), "utf8")).places.length as number;
+  const shown = places.toLocaleString("en-US");
+  const site = readFileSync(join(ROOT, "site/index.html"), "utf8");
+  const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+  assert.ok(site.includes(`<b>${shown}</b> places to find`) && site.includes(`data-count="${places}"`), `site/index.html should say ${shown} places`);
+  assert.ok(readme.includes(`${shown} places to find`), `README.md should say ${shown} places`);
+});

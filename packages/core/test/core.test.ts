@@ -423,3 +423,48 @@ test("deploy preflight really checks and builds, and stops at the first failure"
   const r = deployPreflight(loop);
   assert.ok(!r.ok && r.stage === "check" && /loop/.test(r.message));
 });
+
+/* ---------- FiveM for GTA V Enhanced ---------- */
+test("FiveM edition: Legacy is unchanged; Enhanced skips the build pin and says what changes", async () => {
+  const { fivemAdapter, ENHANCED_NOTES } = await import("../src/adapters/fivem");
+  const legacy = load();
+  assert.equal(legacy.engine.edition, "legacy", "existing Blueprints stay on Legacy");
+  const lcfg = fivemAdapter.build(legacy).files.find((f) => f.path === "server.cfg")!.contents;
+  assert.match(lcfg, /^sv_enforceGameBuild \d+$/m);
+  assert.doesNotMatch(lcfg, /sv_syncTickRate|Cfx Server/);
+
+  const enh = structuredClone(raw);
+  enh.engine = { ...enh.engine, edition: "enhanced", build: "3258" };
+  const out = fivemAdapter.build(validateBlueprint(enh).ok ? (validateBlueprint(enh) as any).blueprint : enh);
+  const cfg = out.files.find((f) => f.path === "server.cfg")!.contents;
+  assert.doesNotMatch(cfg, /^sv_enforceGameBuild/m, "Enhanced only supports the latest build");
+  assert.match(cfg, /^set sv_syncTickRate 60$/m);
+  assert.match(cfg, /run it on Cfx Server/);
+  for (const n of ENHANCED_NOTES) assert.ok(out.notes.includes(n));
+  assert.ok(out.notes.some((n) => /Asset Escrow isn't implemented/.test(n)));
+});
+
+test("FiveM edition: graphic mods are blocked and Mumble voice is flagged on Enhanced", async () => {
+  const { checkCompatibility } = await import("../src/compatibility");
+  const mods = [{ id: "graphics-neon", enabled: true }, { id: "pma-voice", enabled: true }];
+  const legacy = checkCompatibility({ mods, engine: { target: "fivem", edition: "legacy" } } as any);
+  assert.ok(!legacy.issues.some((i) => /Enhanced/.test(i.message)));
+  const enh = checkCompatibility({ mods, engine: { target: "fivem", edition: "enhanced" } } as any);
+  const neon = enh.issues.find((i) => i.mods.includes("graphics-neon"))!;
+  assert.equal(neon.level, "error");
+  assert.deepEqual(neon.fix?.remove, ["graphics-neon"]);
+  const voice = enh.issues.find((i) => i.code === "enhanced-voice")!;
+  assert.equal(voice.level, "warning");
+  assert.ok(!enh.loadOrder.includes("graphics-neon"));
+});
+
+test("GTA VI facts are dated, sourced as confirmed or reported, and never promise a day-one move", async () => {
+  const { GTA6_CAPABILITIES, GTA6_CHECKED, gta6Adapter } = await import("../src/adapters/gta6");
+  assert.match(GTA6_CHECKED, /^\d{4}-\d{2}-\d{2}$/);
+  const by = (f: string) => GTA6_CAPABILITIES.find((c) => c.feature === f)!;
+  assert.equal(by("Consoles").status, "confirmed");
+  assert.notEqual(by("PC release").status, "confirmed");
+  assert.notEqual(by("GTA VI Online").status, "confirmed");
+  const text = JSON.stringify(GTA6_CAPABILITIES) + gta6Adapter.build(load()).notes.join(" ");
+  assert.doesNotMatch(text, /day one|the day support|ships with GTA VI/i);
+});

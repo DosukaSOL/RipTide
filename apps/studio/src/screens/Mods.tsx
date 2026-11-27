@@ -95,7 +95,7 @@ export function Mods() {
                       <div className="mod-name">
                         {m.name}
                         {m.status !== "ready" && <span className={`chip ${m.status === "beta" ? "sun" : "dim"}`}>{m.status === "beta" ? "Beta" : "Planned"}</span>}
-                        {m.engines.includes("gta6") && <span className="chip dim">GTA VI ready</span>}
+                        {m.engines.includes("gta6") && <span className="chip dim" title="Its author plans a GTA VI version. Nothing runs on GTA VI yet.">Aims for GTA VI</span>}
                       </div>
                       <div className="mod-sum">{m.summary}</div>
                     </div>

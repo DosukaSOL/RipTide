@@ -73,7 +73,7 @@ const G = {
     <h1 style="margin-top:24px">The official map of <span class="g">Leonida.</span></h1>
     <p class="sub" style="margin-top:22px">Search anything, filter by region and tick places off as you find them.</p>
     <div style="display:flex;gap:40px;margin-top:40px">
-      ${[["884", "places to find"], ["9", "categories"], ["8", "playthroughs"]].map(([n, l]) => `<div><div class="g" style="font:700 64px/1 Adventor">${n}</div><div style="font-size:20px;color:#A79DC8;margin-top:8px">${l}</div></div>`).join("")}
+      ${[["1,028", "places to find"], ["9", "categories"], ["8", "playthroughs"]].map(([n, l]) => `<div><div class="g" style="font:700 64px/1 Adventor">${n}</div><div style="font-size:20px;color:#A79DC8;margin-top:8px">${l}</div></div>`).join("")}
     </div>
   </div>
   <div class="frame" style="position:absolute;left:690px;top:110px;width:850px"><img src="/cap/map-place.png"></div>`,
